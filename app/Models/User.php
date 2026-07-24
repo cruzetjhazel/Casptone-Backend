@@ -149,4 +149,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\Payment::class, 'photographer_id');
     }
+    public function paymentReferences(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\PhotographerPaymentReference::class, 'photographer_id');
+    }
 }

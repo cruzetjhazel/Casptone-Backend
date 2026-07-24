@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Photographer\PaymentConfigController;
 use App\Http\Controllers\Api\Client\PaymentController as ClientPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Api\Photographer\PaymentReferenceController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -139,3 +140,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('admin/payments', [AdminPaymentController::class, 'index']);
 });
+Route::get('payment-references', [PaymentReferenceController::class, 'index']);
+        Route::post('payment-references', [PaymentReferenceController::class, 'store']);
+        Route::post('payment-references/{paymentReference}/invalidate', [PaymentReferenceController::class, 'invalidate']);
+
+        Route::post('payments/{payment}/verify', [PhotographerPaymentController::class, 'verify']);
+        Route::post('payments/{payment}/reject', [PhotographerPaymentController::class, 'reject']);

@@ -57,7 +57,11 @@ class PaymentController extends Controller
 
         $payment = $action->execute($booking, $request->validated());
 
-        return $this->success(new PaymentResource($payment), 'Payment submitted. Booking is now confirmed.', 201);
+        $message = $payment->matching_status->value === 'matched'
+            ? 'Payment submitted and verified automatically. Booking is now confirmed.'
+            : 'Payment submitted. The reference could not be automatically matched — the photographer will review it.';
+
+        return $this->success(new PaymentResource($payment), $message, 201);
     }
 
     protected function authorizeOwnership(Request $request, Booking $booking): void

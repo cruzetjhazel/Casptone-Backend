@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Payment;
 
+use App\Enums\PhotographerPaymentReferenceStatus;
 use App\Models\Booking;
 use App\Models\PhotographerPaymentConfig;
+use App\Models\PhotographerPaymentReference;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -26,19 +28,34 @@ class SubmitPaymentTest extends TestCase
         ]);
     }
 
+    protected function registerReference(Booking $booking, string $reference, float $amount): PhotographerPaymentReference
+    {
+        return PhotographerPaymentReference::create([
+            'photographer_id' => $booking->photographer_id,
+            'reference_number' => $reference,
+            'amount_received' => $amount,
+            'payment_date' => now()->format('Y-m-d'),
+            'status' => PhotographerPaymentReferenceStatus::Available,
+        ]);
+    }
+
     public function test_client_can_submit_full_payment_and_booking_is_confirmed(): void
     {
         $booking = $this->acceptedBooking(10000);
+        $this->registerReference($booking, 'GC-REF-0001', 10000);
         Sanctum::actingAs($booking->client);
 
         $response = $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0001',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
         ]);
 
-        $response->assertCreated()->assertJsonPath('data.booking.status', 'confirmed');
+        $response->assertCreated()
+            ->assertJsonPath('data.booking.status', 'confirmed')
+            ->assertJsonPath('data.matching_status', 'matched');
         $this->assertEquals('confirmed', $booking->fresh()->status->value);
         $this->assertEquals('fully_paid', $booking->fresh()->payment_status->value);
     }
@@ -46,16 +63,18 @@ class SubmitPaymentTest extends TestCase
     public function test_client_can_submit_half_payment_leaving_a_remaining_balance(): void
     {
         $booking = $this->acceptedBooking(10000);
+        $this->registerReference($booking, 'GC-REF-0002', 5000);
         Sanctum::actingAs($booking->client);
 
         $response = $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'half',
             'reference_number' => 'GC-REF-0002',
+            'payer_name' => 'Jane Doe',
             'amount' => 5000,
             'payment_date' => now()->format('Y-m-d'),
         ]);
 
-        $response->assertCreated();
+        $response->assertCreated()->assertJsonPath('data.matching_status', 'matched');
         $fresh = $booking->fresh();
         $this->assertEquals('confirmed', $fresh->status->value);
         $this->assertEquals('partially_paid', $fresh->payment_status->value);
@@ -70,30 +89,61 @@ class SubmitPaymentTest extends TestCase
         $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0003',
+            'payer_name' => 'Jane Doe',
             'amount' => 8000,
             'payment_date' => now()->format('Y-m-d'),
         ])->assertStatus(422);
     }
 
-    public function test_duplicate_reference_number_is_rejected(): void
+    public function test_payment_is_pending_verification_when_no_matching_reference_exists(): void
+    {
+        $booking = $this->acceptedBooking(10000);
+        Sanctum::actingAs($booking->client);
+
+        // No photographer-side reference was ever registered for this code.
+        $response = $this->postJson("/api/client/bookings/{$booking->id}/payments", [
+            'plan' => 'full',
+            'reference_number' => 'GC-REF-UNKNOWN',
+            'payer_name' => 'Jane Doe',
+            'amount' => 10000,
+            'payment_date' => now()->format('Y-m-d'),
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.matching_status', 'not_matched');
+        $fresh = $booking->fresh();
+        $this->assertEquals('accepted', $fresh->status->value); // never auto-confirms
+        $this->assertEquals('pending_verification', $fresh->payment_status->value);
+    }
+
+    public function test_already_used_reference_does_not_match_again(): void
     {
         $first = $this->acceptedBooking(10000);
+        $this->registerReference($first, 'GC-REF-REUSED', 10000);
         Sanctum::actingAs($first->client);
         $this->postJson("/api/client/bookings/{$first->id}/payments", [
             'plan' => 'full',
-            'reference_number' => 'GC-REF-DUP',
+            'reference_number' => 'GC-REF-REUSED',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
-        ])->assertCreated();
+        ])->assertCreated()->assertJsonPath('data.matching_status', 'matched');
 
+        // Same photographer, same reference, a different booking.
         $second = $this->acceptedBooking(10000);
+        Booking::query()->whereKey($second->id)->update(['photographer_id' => $first->photographer_id]);
+        $second = $second->fresh();
         Sanctum::actingAs($second->client);
-        $this->postJson("/api/client/bookings/{$second->id}/payments", [
+
+        $response = $this->postJson("/api/client/bookings/{$second->id}/payments", [
             'plan' => 'full',
-            'reference_number' => 'GC-REF-DUP',
+            'reference_number' => 'GC-REF-REUSED',
+            'payer_name' => 'John Roe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
-        ])->assertStatus(422);
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.matching_status', 'not_matched');
+        $this->assertEquals('pending_verification', $second->fresh()->payment_status->value);
     }
 
     public function test_cannot_pay_for_a_booking_that_is_not_accepted(): void
@@ -109,6 +159,7 @@ class SubmitPaymentTest extends TestCase
         $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0004',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
         ])->assertStatus(422);
@@ -122,6 +173,7 @@ class SubmitPaymentTest extends TestCase
         $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0005',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
         ])->assertCreated();
@@ -129,6 +181,7 @@ class SubmitPaymentTest extends TestCase
         $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0006',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
         ])->assertStatus(422);
@@ -143,6 +196,7 @@ class SubmitPaymentTest extends TestCase
         $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0007',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
         ])->assertStatus(403);
@@ -156,6 +210,7 @@ class SubmitPaymentTest extends TestCase
         $this->postJson("/api/client/bookings/{$booking->id}/payments", [
             'plan' => 'full',
             'reference_number' => 'GC-REF-0008',
+            'payer_name' => 'Jane Doe',
             'amount' => 10000,
             'payment_date' => now()->format('Y-m-d'),
         ])->assertStatus(403);

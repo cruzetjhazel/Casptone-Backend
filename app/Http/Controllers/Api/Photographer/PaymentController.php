@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Api\Photographer;
 
+use App\Actions\Payment\ManuallyVerifyPaymentAction;
 use App\Actions\Payment\RecordOnsitePaymentAction;
+use App\Actions\Payment\RejectPaymentAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ManuallyVerifyPaymentRequest;
 use App\Http\Requests\RecordOnsitePaymentRequest;
+use App\Http\Requests\RejectPaymentRequest;
 use App\Http\Resources\PaymentResource;
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Traits\ApiResponses;
 use Illuminate\Http\Request;
-use App\Models\PhotographerPaymentConfig; 
 
 class PaymentController extends Controller
 {
@@ -30,5 +34,23 @@ class PaymentController extends Controller
         $payment = $action->execute($booking, $request->validated());
 
         return $this->success(new PaymentResource($payment), 'Onsite payment recorded.');
+    }
+
+    public function verify(ManuallyVerifyPaymentRequest $request, Payment $payment, ManuallyVerifyPaymentAction $action)
+    {
+        $this->authorize('verify', $payment);
+
+        $payment = $action->execute($payment, $request->user(), $request->validated('notes'));
+
+        return $this->success(new PaymentResource($payment), 'Payment manually verified. Booking is now confirmed.');
+    }
+
+    public function reject(RejectPaymentRequest $request, Payment $payment, RejectPaymentAction $action)
+    {
+        $this->authorize('reject', $payment);
+
+        $payment = $action->execute($payment, $request->user(), $request->validated('notes'));
+
+        return $this->success(new PaymentResource($payment), 'Payment rejected. The client may resubmit.');
     }
 }

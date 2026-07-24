@@ -14,6 +14,7 @@ namespace App\Enums;
 enum BookingPaymentStatus: string
 {
     case Pending = 'pending';
+    case PendingVerification = 'pending_verification';
     case PartiallyPaid = 'partially_paid';
     case FullyPaid = 'fully_paid';
     case Failed = 'failed';

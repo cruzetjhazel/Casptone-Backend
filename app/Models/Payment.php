@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentMatchingStatus;
 use App\Enums\PaymentPlan;
 use App\Enums\PaymentType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,9 @@ class Payment extends Model
 
     protected $fillable = [
         'booking_id', 'client_id', 'photographer_id',
-        'type', 'method', 'plan', 'amount', 'reference_number', 'payment_date', 'notes',
+        'type', 'method', 'plan', 'amount', 'reference_number', 'payer_name', 'payment_date', 'notes',
+        'photographer_payment_reference_id', 'matching_status',
+        'verified_by', 'verified_at', 'verification_action', 'verification_notes',
     ];
 
     protected function casts(): array
@@ -24,6 +27,8 @@ class Payment extends Model
             'plan' => PaymentPlan::class,
             'amount' => 'decimal:2',
             'payment_date' => 'date:Y-m-d',
+            'matching_status' => PaymentMatchingStatus::class,
+            'verified_at' => 'datetime',
         ];
     }
 
@@ -40,5 +45,20 @@ class Payment extends Model
     public function photographer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'photographer_id');
+    }
+
+    public function matchedReference(): BelongsTo
+    {
+        return $this->belongsTo(PhotographerPaymentReference::class, 'photographer_payment_reference_id');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function isAwaitingManualReview(): bool
+    {
+        return $this->matching_status === PaymentMatchingStatus::NotMatched;
     }
 }

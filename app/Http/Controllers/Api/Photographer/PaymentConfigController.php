@@ -19,7 +19,7 @@ class PaymentConfigController extends Controller
     {
         abort_unless($request->user()->isPhotographer(), 403);
 
-        $config = PhotographerPaymentConfig::where('user_id', $booking->photographer_id)->first();
+        $config = PhotographerPaymentConfig::where('user_id', $request->user()->id)->first();
 
         return $this->success($config ? new PaymentConfigResource($config) : null);
     }
