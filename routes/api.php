@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\PublicPhotographerPackageController;
 use App\Http\Controllers\Api\Photographer\AvailabilityWindowController;
 use App\Http\Controllers\Api\Photographer\BlockedDateController;
 use App\Http\Controllers\Api\PublicPhotographerAvailabilityController;
+use App\Http\Controllers\Api\Client\BookingController as ClientBookingController;
+use App\Http\Controllers\Api\Photographer\BookingController as PhotographerBookingController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -104,5 +106,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('blocked-dates', [BlockedDateController::class, 'store']);
         Route::patch('blocked-dates/{blockedDate}', [BlockedDateController::class, 'update']);
         Route::delete('blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy']);
+    });
+});Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('client')->group(function () {
+        Route::get('bookings', [ClientBookingController::class, 'index']);
+        Route::post('bookings', [ClientBookingController::class, 'store']);
+        Route::get('bookings/{booking}', [ClientBookingController::class, 'show']);
+        Route::post('bookings/{booking}/request-cancellation', [ClientBookingController::class, 'requestCancellation']);
+    });
+
+    Route::prefix('photographer')->group(function () {
+        Route::get('bookings', [PhotographerBookingController::class, 'index']);
+        Route::get('bookings/{booking}', [PhotographerBookingController::class, 'show']);
+        Route::post('bookings/{booking}/accept', [PhotographerBookingController::class, 'accept']);
+        Route::post('bookings/{booking}/reject', [PhotographerBookingController::class, 'reject']);
+        Route::post('bookings/{booking}/cancellation/approve', [PhotographerBookingController::class, 'approveCancellation']);
+        Route::post('bookings/{booking}/cancellation/reject', [PhotographerBookingController::class, 'rejectCancellation']);
     });
 });

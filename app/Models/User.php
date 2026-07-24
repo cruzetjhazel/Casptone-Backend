@@ -125,4 +125,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\BlockedDate::class);
     }
+    public function bookingsAsClient(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Booking::class, 'client_id');
+    }
+
+    public function bookingsAsPhotographer(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Booking::class, 'photographer_id');
+    }
 }
