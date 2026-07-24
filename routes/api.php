@@ -18,6 +18,10 @@ use App\Http\Controllers\Api\Photographer\BlockedDateController;
 use App\Http\Controllers\Api\PublicPhotographerAvailabilityController;
 use App\Http\Controllers\Api\Client\BookingController as ClientBookingController;
 use App\Http\Controllers\Api\Photographer\BookingController as PhotographerBookingController;
+use App\Http\Controllers\Api\Photographer\PaymentConfigController;
+use App\Http\Controllers\Api\Client\PaymentController as ClientPaymentController;
+use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPaymentController;
+use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -113,6 +117,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('bookings', [ClientBookingController::class, 'store']);
         Route::get('bookings/{booking}', [ClientBookingController::class, 'show']);
         Route::post('bookings/{booking}/request-cancellation', [ClientBookingController::class, 'requestCancellation']);
+
+        Route::get('bookings/{booking}/payment-info', [ClientPaymentController::class, 'paymentInfo']);
+        Route::post('bookings/{booking}/payments', [ClientPaymentController::class, 'store']);
+        Route::get('payments', [ClientPaymentController::class, 'index']);
     });
 
     Route::prefix('photographer')->group(function () {
@@ -122,5 +130,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('bookings/{booking}/reject', [PhotographerBookingController::class, 'reject']);
         Route::post('bookings/{booking}/cancellation/approve', [PhotographerBookingController::class, 'approveCancellation']);
         Route::post('bookings/{booking}/cancellation/reject', [PhotographerBookingController::class, 'rejectCancellation']);
+
+        Route::get('payment-config', [PaymentConfigController::class, 'show']);
+        Route::post('payment-config', [PaymentConfigController::class, 'store']);
+        Route::post('bookings/{booking}/payments/onsite', [PhotographerPaymentController::class, 'storeOnsite']);
+        Route::get('payments', [PhotographerPaymentController::class, 'index']);
     });
+
+    Route::get('admin/payments', [AdminPaymentController::class, 'index']);
 });

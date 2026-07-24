@@ -37,6 +37,9 @@ class BookingResource extends JsonResource
             'cancellation_requested_at' => $this->cancellation_requested_at,
             'cancellation_decision' => $this->cancellation_decision?->value,
             'cancellation_decided_at' => $this->cancellation_decided_at,
+            'payment_plan' => $this->payment_plan?->value,
+            'payment_status' => $this->payment_status?->value,
+            'remaining_balance' => $this->remainingBalance(),
             'created_at' => $this->created_at,
         ];
     }
