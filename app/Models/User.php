@@ -116,4 +116,13 @@ class User extends Authenticatable
     {
         return $this->isPhotographer() && $this->isApprovedPhotographer();
     }
+    public function availabilityWindows(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\AvailabilityWindow::class);
+    }
+
+    public function blockedDates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\BlockedDate::class);
+    }
 }

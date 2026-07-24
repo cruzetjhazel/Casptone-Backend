@@ -13,6 +13,9 @@ use App\Http\Controllers\Api\Photographer\CustomPackageController;
 use App\Http\Controllers\Api\Photographer\PackageController;
 use App\Http\Controllers\Api\PublicPhotographerAddOnController;
 use App\Http\Controllers\Api\PublicPhotographerPackageController;
+use App\Http\Controllers\Api\Photographer\AvailabilityWindowController;
+use App\Http\Controllers\Api\Photographer\BlockedDateController;
+use App\Http\Controllers\Api\PublicPhotographerAvailabilityController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -85,5 +88,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('custom-package/components/{component}', [CustomPackageController::class, 'updateComponent']);
         Route::post('custom-package/components/{component}/archive', [CustomPackageController::class, 'archiveComponent']);
         Route::post('custom-package/components/{component}/restore', [CustomPackageController::class, 'restoreComponent']);
+    });
+});
+Route::get('photographers/{user}/availability/calendar', [PublicPhotographerAvailabilityController::class, 'calendar']);
+Route::get('photographers/{user}/availability/slots', [PublicPhotographerAvailabilityController::class, 'slots']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('photographer')->group(function () {
+        Route::get('availability-windows', [AvailabilityWindowController::class, 'index']);
+        Route::post('availability-windows', [AvailabilityWindowController::class, 'store']);
+        Route::patch('availability-windows/{availabilityWindow}', [AvailabilityWindowController::class, 'update']);
+        Route::delete('availability-windows/{availabilityWindow}', [AvailabilityWindowController::class, 'destroy']);
+
+        Route::get('blocked-dates', [BlockedDateController::class, 'index']);
+        Route::post('blocked-dates', [BlockedDateController::class, 'store']);
+        Route::patch('blocked-dates/{blockedDate}', [BlockedDateController::class, 'update']);
+        Route::delete('blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy']);
     });
 });
