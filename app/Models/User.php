@@ -82,4 +82,38 @@ class User extends Authenticatable
             ->where('status', \App\Enums\PortfolioImageStatus::Active)
             ->count();
     }
+    public function packages(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Package::class);
+    }
+
+    public function addOns(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\AddOn::class);
+    }
+
+    public function customPackageConfig(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\CustomPackageConfig::class);
+    }
+
+    public function customPackageComponents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\CustomPackageComponent::class);
+    }
+
+    public function activePackageCount(): int
+    {
+        return $this->packages()->where('status', \App\Enums\PackageStatus::Published)->count();
+    }
+
+    public function hasActivePackage(): bool
+    {
+        return $this->activePackageCount() > 0;
+    }
+
+    public function isEligibleForBusinessManagement(): bool
+    {
+        return $this->isPhotographer() && $this->isApprovedPhotographer();
+    }
 }

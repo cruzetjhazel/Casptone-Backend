@@ -8,6 +8,11 @@ use App\Http\Controllers\Api\Admin\PhotographerPortfolioController as AdminPhoto
 use App\Http\Controllers\Api\Photographer\PortfolioController;
 use App\Http\Controllers\Api\Photographer\ProfileController;
 use App\Http\Controllers\Api\PublicPhotographerController;
+use App\Http\Controllers\Api\Photographer\AddOnController;
+use App\Http\Controllers\Api\Photographer\CustomPackageController;
+use App\Http\Controllers\Api\Photographer\PackageController;
+use App\Http\Controllers\Api\PublicPhotographerAddOnController;
+use App\Http\Controllers\Api\PublicPhotographerPackageController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
@@ -56,4 +61,29 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('admin/photographer-portfolio-images/{portfolioImage}/archive', [AdminPhotographerPortfolioController::class, 'archive']);
+});
+Route::get('photographers/{user}/packages', [PublicPhotographerPackageController::class, 'index']);
+Route::get('photographers/{user}/add-ons', [PublicPhotographerAddOnController::class, 'index']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('photographer')->group(function () {
+        Route::apiResource('packages', PackageController::class)->except(['destroy'])->parameters(['packages' => 'package']);
+        Route::delete('packages/{package}', [PackageController::class, 'destroy']);
+        Route::post('packages/{package}/publish', [PackageController::class, 'publish']);
+        Route::post('packages/{package}/revert-to-draft', [PackageController::class, 'revertToDraft']);
+        Route::post('packages/{package}/archive', [PackageController::class, 'archive']);
+        Route::post('packages/{package}/restore', [PackageController::class, 'restore']);
+
+        Route::apiResource('add-ons', AddOnController::class)->parameters(['add-ons' => 'addOn']);
+        Route::post('add-ons/{addOn}/archive', [AddOnController::class, 'archive']);
+        Route::post('add-ons/{addOn}/restore', [AddOnController::class, 'restore']);
+
+        Route::get('custom-package/config', [CustomPackageController::class, 'showConfig']);
+        Route::patch('custom-package/config', [CustomPackageController::class, 'updateConfig']);
+        Route::get('custom-package/components', [CustomPackageController::class, 'indexComponents']);
+        Route::post('custom-package/components', [CustomPackageController::class, 'storeComponent']);
+        Route::patch('custom-package/components/{component}', [CustomPackageController::class, 'updateComponent']);
+        Route::post('custom-package/components/{component}/archive', [CustomPackageController::class, 'archiveComponent']);
+        Route::post('custom-package/components/{component}/restore', [CustomPackageController::class, 'restoreComponent']);
+    });
 });

@@ -5,6 +5,8 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Resources\PublicPackageResource;
+use App\Http\Resources\PublicAddOnResource;
 
 class PhotographerPublicProfileResource extends JsonResource
 {
@@ -37,6 +39,12 @@ class PhotographerPublicProfileResource extends JsonResource
             ],
             'portfolio' => PortfolioImageResource::collection(
                 $this->portfolioImages->where('status', \App\Enums\PortfolioImageStatus::Active)
+            ),
+            'packages' => PublicPackageResource::collection(
+                $this->packages->where('status', \App\Enums\PackageStatus::Published)
+            ),
+            'add_ons' => PublicAddOnResource::collection(
+                $this->addOns->where('status', \App\Enums\AddOnStatus::Active)
             ),
         ];
     }

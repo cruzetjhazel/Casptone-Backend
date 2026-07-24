@@ -18,7 +18,7 @@ class PublicPhotographerController extends Controller
             throw new NotFoundHttpException('Photographer profile not found.');
         }
 
-        $user->load(['photographerProfile', 'photographerApplication', 'portfolioImages']);
+        $user->load(['photographerProfile', 'photographerApplication', 'portfolioImages', 'packages', 'addOns']);
 
         return $this->success(new PhotographerPublicProfileResource($user));
     }
