@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\PhotographerPhotographerApplicationStatus;
 use App\Enums\PhotographerType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

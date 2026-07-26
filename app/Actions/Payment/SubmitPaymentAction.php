@@ -79,11 +79,31 @@ class SubmitPaymentAction
                     : BookingPaymentStatus::PartiallyPaid,
                 'status' => BookingStatus::Confirmed,
             ]);
+
+            $freshBooking = $booking->fresh();
+            $freshPayment = $payment->fresh();
+
+            $freshBooking->client->notify(new \App\Notifications\Payment\PaymentVerifiedNotification($freshPayment));
+            $freshBooking->photographer->notify(new \App\Notifications\Payment\PaymentReceivedNotification($freshPayment));
+            $freshBooking->client->notify(new \App\Notifications\Booking\BookingConfirmedNotification($freshBooking));
+            $freshBooking->photographer->notify(new \App\Notifications\Booking\BookingConfirmedNotification($freshBooking));
+
+            if ($plan === PaymentPlan::Full) {
+                $freshBooking->client->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+                $freshBooking->photographer->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+            } else {
+                $freshBooking->client->notify(new \App\Notifications\Payment\RemainingBalanceNotification($freshBooking));
+            }
         } else {
             $booking->update([
                 'payment_plan' => $plan,
                 'payment_status' => BookingPaymentStatus::PendingVerification,
             ]);
+
+            $freshPayment = $payment->fresh();
+
+            $booking->client->notify(new \App\Notifications\Payment\PaymentPendingVerificationNotification($freshPayment));
+            $booking->photographer->notify(new \App\Notifications\Payment\PaymentNeedsReviewNotification($freshPayment));
         }
 
         return $payment->fresh();

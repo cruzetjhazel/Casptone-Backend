@@ -24,11 +24,11 @@ class BookingPolicy
 
     public function respond(User $user, Booking $booking): bool
     {
-        return $user->id === $booking->photographer_id;
+        return $user->id === $booking->photographer_id && $user->isEligibleForBusinessManagement();
     }
 
     public function decideCancellation(User $user, Booking $booking): bool
     {
-        return $user->id === $booking->photographer_id;
+        return $user->id === $booking->photographer_id && $user->isEligibleForBusinessManagement();
     }
 }

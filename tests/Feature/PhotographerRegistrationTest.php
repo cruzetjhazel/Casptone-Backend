@@ -16,6 +16,7 @@ class PhotographerRegistrationTest extends TestCase
         $response = $this->postJson('/api/auth/register-photographer', [
             'name' => 'Alex Freelancer',
             'email' => 'alex@example.com',
+            'phone_number' => '09171234567',
             'password' => 'Str0ngPass!23',
             'password_confirmation' => 'Str0ngPass!23',
             'photographer_type' => 'freelancer',

@@ -11,11 +11,12 @@ class PhotographerProfileRequest extends FormRequest
         return true;
     }
 
-    public function rules(): array
+        public function rules(): array
     {
         return [
             'bio' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'style' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'style' => ['sometimes', 'nullable', 'array'],
+            'style.*' => ['string', 'max:255'],
             'facebook' => ['sometimes', 'nullable', 'url', 'max:255'],
             'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
             'website' => ['sometimes', 'nullable', 'url', 'max:255'],

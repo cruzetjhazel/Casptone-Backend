@@ -153,4 +153,5 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\PhotographerPaymentReference::class, 'photographer_id');
     }
+    
 }

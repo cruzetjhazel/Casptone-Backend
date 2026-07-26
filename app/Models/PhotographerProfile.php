@@ -16,6 +16,13 @@ class PhotographerProfile extends Model
         'facebook', 'instagram', 'website',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'style' => 'array',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

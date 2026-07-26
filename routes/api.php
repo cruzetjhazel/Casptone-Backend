@@ -23,9 +23,10 @@ use App\Http\Controllers\Api\Client\PaymentController as ClientPaymentController
 use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentReferenceController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
+    Route::post('register-client', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -112,7 +113,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('blocked-dates/{blockedDate}', [BlockedDateController::class, 'update']);
         Route::delete('blocked-dates/{blockedDate}', [BlockedDateController::class, 'destroy']);
     });
-});Route::middleware('auth:sanctum')->group(function () {
+});
+
+Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('client')->group(function () {
         Route::get('bookings', [ClientBookingController::class, 'index']);
         Route::post('bookings', [ClientBookingController::class, 'store']);
@@ -136,13 +139,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('payment-config', [PaymentConfigController::class, 'store']);
         Route::post('bookings/{booking}/payments/onsite', [PhotographerPaymentController::class, 'storeOnsite']);
         Route::get('payments', [PhotographerPaymentController::class, 'index']);
-    });
 
-    Route::get('admin/payments', [AdminPaymentController::class, 'index']);
-});
-Route::get('payment-references', [PaymentReferenceController::class, 'index']);
+        Route::get('payment-references', [PaymentReferenceController::class, 'index']);
         Route::post('payment-references', [PaymentReferenceController::class, 'store']);
         Route::post('payment-references/{paymentReference}/invalidate', [PaymentReferenceController::class, 'invalidate']);
 
         Route::post('payments/{payment}/verify', [PhotographerPaymentController::class, 'verify']);
         Route::post('payments/{payment}/reject', [PhotographerPaymentController::class, 'reject']);
+    });
+
+    Route::get('admin/payments', [AdminPaymentController::class, 'index']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+});

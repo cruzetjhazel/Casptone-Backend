@@ -42,6 +42,20 @@ class ManuallyVerifyPaymentAction
             'status' => BookingStatus::Confirmed,
         ]);
 
+        $freshBooking = $booking->fresh();
+        $freshPayment = $payment->fresh();
+
+        $freshBooking->client->notify(new \App\Notifications\Payment\PaymentManuallyVerifiedNotification($freshPayment));
+        $freshBooking->client->notify(new \App\Notifications\Booking\BookingConfirmedNotification($freshBooking));
+        $freshBooking->photographer->notify(new \App\Notifications\Booking\BookingConfirmedNotification($freshBooking));
+
+        if ($plan === PaymentPlan::Full) {
+            $freshBooking->client->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+            $freshBooking->photographer->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+        } else {
+            $freshBooking->client->notify(new \App\Notifications\Payment\RemainingBalanceNotification($freshBooking));
+        }
+
         return $payment->fresh();
     }
 }

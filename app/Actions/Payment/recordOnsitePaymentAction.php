@@ -45,6 +45,13 @@ class RecordOnsitePaymentAction
 
         $booking->update(['payment_status' => BookingPaymentStatus::FullyPaid]);
 
-        return $payment->fresh();
+        $freshBooking = $booking->fresh();
+        $freshPayment = $payment->fresh();
+
+        $freshBooking->client->notify(new \App\Notifications\Payment\OnsitePaymentRecordedNotification($freshPayment));
+        $freshBooking->client->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+        $freshBooking->photographer->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+
+        return $freshPayment;
     }
 }

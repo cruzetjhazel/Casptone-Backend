@@ -18,6 +18,9 @@ class AcceptBookingAction
 
         $booking->update(['status' => BookingStatus::Accepted, 'hold_expires_at' => null]);
 
-        return $booking->fresh();
+        $fresh = $booking->fresh();
+        $fresh->client->notify(new \App\Notifications\Booking\BookingAcceptedNotification($fresh));
+
+        return $fresh;
     }
 }

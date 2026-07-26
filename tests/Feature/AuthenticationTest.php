@@ -14,7 +14,7 @@ class AuthenticationTest extends TestCase
 
     public function test_client_can_register_and_receives_a_token(): void
     {
-        $response = $this->postJson('/api/auth/register', [
+        $response = $this->postJson('/api/auth/register-client', [
             'name' => 'Jane',
             'email' => 'jane@example.com',
             'phone_number' => '09171234567',

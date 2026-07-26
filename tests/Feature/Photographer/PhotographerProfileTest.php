@@ -22,7 +22,7 @@ class PhotographerProfileTest extends TestCase
 
         $response = $this->postJson('/api/photographer/profile', [
             'bio' => 'Wedding and portrait photographer.',
-            'style' => 'Candid',
+            'style' => ['Candid'],
         ]);
 
         $response->assertCreated()->assertJsonPath('success', true);

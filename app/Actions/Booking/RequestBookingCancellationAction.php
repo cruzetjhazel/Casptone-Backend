@@ -29,6 +29,9 @@ class RequestBookingCancellationAction
             'cancellation_decided_at' => null,
         ]);
 
-        return $booking->fresh();
+        $fresh = $booking->fresh();
+        $fresh->photographer->notify(new \App\Notifications\Booking\CancellationRequestedNotification($fresh));
+
+        return $fresh;
     }
 }

@@ -29,6 +29,9 @@ class RejectPaymentAction
         // Reopen the booking for a fresh payment submission attempt.
         $payment->booking->update(['payment_status' => BookingPaymentStatus::Pending]);
 
-        return $payment->fresh();
+        $freshPayment = $payment->fresh();
+        $freshPayment->client->notify(new \App\Notifications\Payment\PaymentRejectedNotification($freshPayment));
+
+        return $freshPayment;
     }
 }

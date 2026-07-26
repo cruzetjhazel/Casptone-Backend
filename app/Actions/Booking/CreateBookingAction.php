@@ -48,7 +48,7 @@ class CreateBookingAction
 
         $this->assertNoConflict($photographer, $data['event_date'], $data['start_time'], $endTime);
 
-        return Booking::create([
+        $booking = Booking::create([
             'client_id' => $client->id,
             'photographer_id' => $photographer->id,
             'package_id' => $packageId,
@@ -70,6 +70,11 @@ class CreateBookingAction
             'status' => BookingStatus::Pending,
             'hold_expires_at' => now()->addHours(24),
         ]);
+
+        $photographer->notify(new \App\Notifications\Booking\NewBookingRequestNotification($booking));
+        $client->notify(new \App\Notifications\Booking\BookingRequestSubmittedNotification($booking));
+
+        return $booking;
     }
 
     protected function resolveFixedPackage(User $photographer, array $data): array

@@ -18,7 +18,7 @@ class RegisterClientRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-            'phone_number' => ['nullable', 'string', 'max:20'],
+            'phone_number' => ['required', 'string', 'max:20'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ];
     }

@@ -26,6 +26,15 @@ class DecideBookingCancellationAction
 
         $booking->save();
 
-        return $booking->fresh();
+        $fresh = $booking->fresh();
+
+        if ($decision === CancellationDecision::Approved) {
+            $fresh->client->notify(new \App\Notifications\Booking\BookingCancelledNotification($fresh));
+            $fresh->photographer->notify(new \App\Notifications\Booking\BookingCancelledNotification($fresh));
+        } else {
+            $fresh->client->notify(new \App\Notifications\Booking\CancellationRequestRejectedNotification($fresh));
+        }
+
+        return $fresh;
     }
 }

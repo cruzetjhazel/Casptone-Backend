@@ -3,6 +3,7 @@
 namespace Tests\Feature\Booking;
 
 use App\Models\Booking;
+use App\Models\PhotographerApplication;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -12,9 +13,17 @@ class BookingLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function approvedPhotographer(): User
+    {
+        $user = User::factory()->photographer()->create();
+        PhotographerApplication::factory()->for($user)->approved()->create();
+
+        return $user;
+    }
+
     public function test_photographer_can_accept_a_pending_booking(): void
     {
-        $photographer = User::factory()->photographer()->create();
+        $photographer = $this->approvedPhotographer();
         $booking = Booking::factory()->create(['photographer_id' => $photographer->id]);
         Sanctum::actingAs($photographer);
 
@@ -24,7 +33,7 @@ class BookingLifecycleTest extends TestCase
 
     public function test_photographer_can_reject_a_pending_booking_with_reason(): void
     {
-        $photographer = User::factory()->photographer()->create();
+        $photographer = $this->approvedPhotographer();
         $booking = Booking::factory()->create(['photographer_id' => $photographer->id]);
         Sanctum::actingAs($photographer);
 
@@ -43,7 +52,7 @@ class BookingLifecycleTest extends TestCase
 
     public function test_cannot_accept_an_already_accepted_booking(): void
     {
-        $photographer = User::factory()->photographer()->create();
+        $photographer = $this->approvedPhotographer();
         $booking = Booking::factory()->accepted()->create(['photographer_id' => $photographer->id]);
         Sanctum::actingAs($photographer);
 
@@ -86,5 +95,14 @@ class BookingLifecycleTest extends TestCase
         Sanctum::actingAs($otherClient);
 
         $this->getJson("/api/client/bookings/{$booking->id}")->assertStatus(403);
+    }
+    public function test_unapproved_photographer_cannot_accept_a_booking(): void
+    {
+        $photographer = User::factory()->photographer()->create();
+        PhotographerApplication::factory()->for($photographer)->pendingReview()->create();
+        $booking = Booking::factory()->create(['photographer_id' => $photographer->id]);
+        Sanctum::actingAs($photographer);
+
+        $this->postJson("/api/photographer/bookings/{$booking->id}/accept")->assertStatus(403);
     }
 }

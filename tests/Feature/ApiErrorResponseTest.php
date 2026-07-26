@@ -11,7 +11,7 @@ class ApiErrorResponseTest extends TestCase
 
     public function test_validation_error_uses_the_standard_envelope(): void
     {
-        $response = $this->postJson('/api/auth/register', []);
+        $response = $this->postJson('/api/auth/register-client', []);
 
         $response->assertStatus(422)
             ->assertJsonStructure(['success', 'message', 'errors'])
