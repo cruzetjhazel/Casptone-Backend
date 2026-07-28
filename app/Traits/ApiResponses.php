@@ -14,4 +14,11 @@ trait ApiResponses
             'data' => $data,
         ], $status);
     }
+    protected function error(string $message, int $status = 422): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+        ], $status);
+    }
 }

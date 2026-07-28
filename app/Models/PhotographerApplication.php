@@ -72,4 +72,22 @@ class PhotographerApplication extends Model
             PhotographerApplicationStatus::RevisionRequested,
         ], true);
     }
+
+    /**
+     * Whether the non-document business fields (name, location, years,
+     * team size, prices, coverage area, shooting types, services) can be
+     * updated from the Studio Settings page.
+     *
+     * Deliberately broader than isEditable(): once an application is
+     * Approved, the photographer should still be able to keep their public
+     * business details current without re-entering the review flow.
+     * Verification documents are NOT covered by this — those still require
+     * isEditable() (Draft/RevisionRequested only), so an approved
+     * photographer can't silently swap a verification document without
+     * admin review.
+     */
+    public function canUpdateBusinessDetails(): bool
+    {
+        return $this->isEditable() || $this->status === PhotographerApplicationStatus::Approved;
+    }
 }

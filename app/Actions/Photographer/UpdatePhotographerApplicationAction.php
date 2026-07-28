@@ -10,7 +10,25 @@ class UpdatePhotographerApplicationAction
 {
     public function execute(PhotographerApplication $application, array $data, array $files = []): PhotographerApplication
     {
-        if (! $application->isEditable()) {
+        $hasDocumentFiles = ($files['government_id'] ?? null) instanceof UploadedFile
+            || ($files['selfie_with_id'] ?? null) instanceof UploadedFile
+            || ($files['business_permit'] ?? null) instanceof UploadedFile
+            || ! empty($files['additional_documents']);
+
+        // Verification documents stay locked to the Draft/RevisionRequested
+        // intake flow even after approval — swapping a government ID or
+        // permit post-approval should go through re-review, not a silent
+        // Settings-page save.
+        if ($hasDocumentFiles && ! $application->isEditable()) {
+            throw ValidationException::withMessages([
+                'status' => ['Verification documents can only be changed while your application is in draft or revision-requested status.'],
+            ]);
+        }
+
+        // Plain business details (name, location, prices, coverage, etc.)
+        // are also editable once Approved — this is what the Studio
+        // Settings page saves, and it shouldn't require re-entering review.
+        if (! $hasDocumentFiles && ! $application->canUpdateBusinessDetails()) {
             throw ValidationException::withMessages([
                 'status' => ['This application can no longer be edited in its current status.'],
             ]);

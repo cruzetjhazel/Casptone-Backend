@@ -12,6 +12,19 @@ class PublicPhotographerController extends Controller
 {
     use ApiResponses;
 
+    public function index()
+{
+    $photographers = User::query()
+        ->where('account_type', \App\Enums\AccountType::Photographer)
+        ->whereHas('photographerApplication', fn ($q) =>
+            $q->where('status', \App\Enums\PhotographerApplicationStatus::Approved)
+        )
+        ->with(['photographerProfile', 'photographerApplication', 'portfolioImages', 'packages', 'addOns'])
+        ->get();
+
+    return $this->success(PhotographerPublicProfileResource::collection($photographers));
+}
+
     public function show(User $user)
     {
         if (! $user->isPhotographer() || ! $user->isApprovedPhotographer()) {

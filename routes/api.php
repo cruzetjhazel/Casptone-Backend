@@ -24,6 +24,10 @@ use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPayme
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentReferenceController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Client\ProfileController as ClientProfileController;
+use App\Http\Controllers\Api\Client\FavoritePhotographerController;
+
 
 Route::prefix('auth')->group(function () {
     Route::post('register-client', [AuthController::class, 'register']);
@@ -43,7 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('application', [PhotographerApplicationController::class, 'update']);
         Route::post('application/submit', [PhotographerApplicationController::class, 'submit']);
         Route::post('application/reapply', [PhotographerApplicationController::class, 'reapply']);
-    });
+        Route::get('application/documents/{type}', [PhotographerApplicationController::class, 'downloadDocument']);
+        });
 
     Route::prefix('admin/photographer-applications')->group(function () {
         Route::get('/', [AdminPhotographerApplicationController::class, 'index']);
@@ -55,6 +60,23 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
+Route::post('auth/forgot-password', [PasswordResetController::class, 'forgotPassword']);
+Route::post('auth/reset-password', [PasswordResetController::class, 'resetPassword']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('client')->group(function () {
+        Route::get('profile', [ClientProfileController::class, 'show']);
+        Route::patch('profile', [ClientProfileController::class, 'update']);
+        Route::post('change-password', [ClientProfileController::class, 'changePassword']);
+        Route::post('deactivate', [ClientProfileController::class, 'deactivate']);
+
+        Route::get('favorites', [FavoritePhotographerController::class, 'index']);
+        Route::post('favorites/{user}', [FavoritePhotographerController::class, 'store']);
+        Route::delete('favorites/{user}', [FavoritePhotographerController::class, 'destroy']);
+    });
+});
+
+Route::get('photographers', [PublicPhotographerController::class, 'index']);
 Route::get('photographers/{user}', [PublicPhotographerController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {

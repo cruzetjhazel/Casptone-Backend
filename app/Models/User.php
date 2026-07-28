@@ -153,5 +153,25 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\PhotographerPaymentReference::class, 'photographer_id');
     }
+    public function clientProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\ClientProfile::class);
+    }
+
+    public function favoritePhotographers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\FavoritePhotographer::class, 'client_id');
+    }
+
+    public function hasOngoingBookings(): bool
+    {
+        return $this->bookingsAsClient()
+            ->whereIn('status', [
+                \App\Enums\BookingStatus::Pending,
+                \App\Enums\BookingStatus::Accepted,
+                \App\Enums\BookingStatus::Confirmed,
+            ])
+            ->exists();
+    }
     
 }

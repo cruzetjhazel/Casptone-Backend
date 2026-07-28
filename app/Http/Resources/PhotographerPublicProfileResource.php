@@ -22,12 +22,14 @@ class PhotographerPublicProfileResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'photographer_type' => $application?->professional_type?->value,
+            'is_bookable' => app(\App\Services\Photographer\BookabilityService::class)->isBookable($this->resource),
+            'photographer_type' => $application?->photographer_type?->value,
             'business_name' => $application?->business_name,
             'location' => $application?->location,
             'coverage_area' => $application?->coverage_area,
             'services' => $application?->services,
             'starting_price' => $application?->price_min,
+            'max_price' => $application?->price_max,
             'style' => $profile?->style,
             'bio' => $profile?->bio,
             'profile_photo_url' => $profile?->profile_photo_path ? Storage::disk('public')->url($profile->profile_photo_path) : null,

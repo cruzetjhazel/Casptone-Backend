@@ -66,9 +66,11 @@ class PublicAvailabilityTest extends TestCase
         $user = $this->approvedPhotographer();
         $package = Package::factory()->for($user)->published()->create(['duration_minutes' => 60, 'buffer_minutes' => 0]);
 
-        $availableDate = now()->addDays(3);
-        $partialDate = now()->addDays(4);
-        $unavailableDate = now()->addDays(5);
+        // Anchor all three dates to the start of next month so they can
+        // never straddle a month boundary, regardless of today's date.
+        $availableDate = now()->addMonthNoOverflow()->startOfMonth()->addDays(2);
+        $partialDate = $availableDate->copy()->addDay();
+        $unavailableDate = $availableDate->copy()->addDays(2);
 
         AvailabilityWindow::factory()->for($user)->create(['date' => $availableDate->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '17:00']);
         AvailabilityWindow::factory()->for($user)->create(['date' => $partialDate->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '17:00']);
