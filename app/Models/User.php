@@ -173,5 +173,10 @@ class User extends Authenticatable
             ])
             ->exists();
     }
+
+    public function walkInClients(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\WalkInClient::class, 'photographer_id');
+    }
     
 }

@@ -27,6 +27,8 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Client\ProfileController as ClientProfileController;
 use App\Http\Controllers\Api\Client\FavoritePhotographerController;
+use App\Http\Controllers\Api\Photographer\ClientController;
+
 
 
 Route::prefix('auth')->group(function () {
@@ -58,6 +60,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{photographerApplication}/reject', [AdminPhotographerApplicationController::class, 'reject']);
         Route::post('{photographerApplication}/request-revision', [AdminPhotographerApplicationController::class, 'requestRevision']);
     });
+});
+
+Route::prefix('photographer')->group(function () {
+    Route::get('clients', [ClientController::class, 'index']);
+    Route::post('clients', [ClientController::class, 'store']);
+    Route::patch('clients/{walkInClient}', [ClientController::class, 'update']);
+    Route::post('clients/{walkInClient}/archive', [ClientController::class, 'archive']);
 });
 
 Route::post('auth/forgot-password', [PasswordResetController::class, 'forgotPassword']);
