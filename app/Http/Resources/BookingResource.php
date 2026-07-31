@@ -40,6 +40,8 @@ class BookingResource extends JsonResource
             'payment_plan' => $this->payment_plan?->value,
             'payment_status' => $this->payment_status?->value,
             'remaining_balance' => $this->remainingBalance(),
+            'service_status' => $this->service_status?->value,
+            'service_status_updated_at' => $this->service_status_updated_at,
             'created_at' => $this->created_at,
         ];
     }

@@ -3,7 +3,10 @@
 namespace Database\Factories;
 
 use App\Enums\BookingLocationType;
+use App\Enums\BookingPaymentStatus;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentPlan;
+use App\Enums\ServiceTrackerStatus;
 use App\Models\Booking;
 use App\Models\Package;
 use App\Models\User;
@@ -39,6 +42,26 @@ class BookingFactory extends Factory
     public function accepted(): static
     {
         return $this->state(fn () => ['status' => BookingStatus::Accepted, 'hold_expires_at' => null]);
+    }
+
+    public function confirmed(): static
+    {
+        return $this->state(fn () => [
+            'status' => BookingStatus::Confirmed,
+            'payment_plan' => PaymentPlan::Full,
+            'payment_status' => BookingPaymentStatus::FullyPaid,
+        ]);
+    }
+
+    public function completed(): static
+    {
+        return $this->state(fn () => [
+            'status' => BookingStatus::Completed,
+            'payment_plan' => PaymentPlan::Full,
+            'payment_status' => BookingPaymentStatus::FullyPaid,
+            'service_status' => ServiceTrackerStatus::Completed,
+            'service_status_updated_at' => now(),
+        ]);
     }
 
     public function rejected(): static

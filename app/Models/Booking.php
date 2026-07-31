@@ -7,6 +7,7 @@ use App\Enums\BookingPaymentStatus;
 use App\Enums\BookingStatus;
 use App\Enums\CancellationDecision;
 use App\Enums\PaymentPlan;
+use App\Enums\ServiceTrackerStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,7 @@ class Booking extends Model
         'rejection_reason', 'cancellation_reason', 'cancellation_requested_at',
         'cancellation_decision', 'cancellation_decided_at',
         'payment_plan', 'payment_status',
+        'service_status', 'service_status_updated_at',
     ];
 
     protected function casts(): array
@@ -49,6 +51,8 @@ class Booking extends Model
             'cancellation_decided_at' => 'datetime',
             'payment_plan' => PaymentPlan::class,
             'payment_status' => BookingPaymentStatus::class,
+            'service_status' => ServiceTrackerStatus::class,
+            'service_status_updated_at' => 'datetime',
         ];
     }
 
@@ -118,5 +122,15 @@ class Booking extends Model
         return $this->status === BookingStatus::Confirmed
             && $this->payment_plan === PaymentPlan::Half
             && $this->payment_status !== BookingPaymentStatus::FullyPaid;
+    }
+
+    /**
+     * Service Tracker (Module 10, §8.10-8.11) is only meaningful once a
+     * booking has actually been confirmed — or is already Completed via the
+     * tracker reaching its final stage.
+     */
+    public function canManageServiceTracker(): bool
+    {
+        return in_array($this->status, [BookingStatus::Confirmed, BookingStatus::Completed], true);
     }
 }

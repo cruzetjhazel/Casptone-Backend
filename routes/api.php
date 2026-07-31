@@ -28,7 +28,7 @@ use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Client\ProfileController as ClientProfileController;
 use App\Http\Controllers\Api\Client\FavoritePhotographerController;
 use App\Http\Controllers\Api\Photographer\ClientController;
-
+use App\Http\Controllers\Api\Photographer\ServiceTrackerController;
 
 
 Route::prefix('auth')->group(function () {
@@ -60,13 +60,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{photographerApplication}/reject', [AdminPhotographerApplicationController::class, 'reject']);
         Route::post('{photographerApplication}/request-revision', [AdminPhotographerApplicationController::class, 'requestRevision']);
     });
-});
-
-Route::prefix('photographer')->group(function () {
-    Route::get('clients', [ClientController::class, 'index']);
-    Route::post('clients', [ClientController::class, 'store']);
-    Route::patch('clients/{walkInClient}', [ClientController::class, 'update']);
-    Route::post('clients/{walkInClient}/archive', [ClientController::class, 'archive']);
 });
 
 Route::post('auth/forgot-password', [PasswordResetController::class, 'forgotPassword']);
@@ -165,6 +158,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('bookings/{booking}/reject', [PhotographerBookingController::class, 'reject']);
         Route::post('bookings/{booking}/cancellation/approve', [PhotographerBookingController::class, 'approveCancellation']);
         Route::post('bookings/{booking}/cancellation/reject', [PhotographerBookingController::class, 'rejectCancellation']);
+        Route::patch('bookings/{booking}/service-tracker', [ServiceTrackerController::class, 'update']);
 
         Route::get('payment-config', [PaymentConfigController::class, 'show']);
         Route::post('payment-config', [PaymentConfigController::class, 'store']);
