@@ -2,6 +2,7 @@
 
 namespace App\Actions\Booking;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\AddOnStatus;
 use App\Enums\BookingLocationType;
 use App\Enums\BookingStatus;
@@ -18,6 +19,7 @@ class CreateBookingAction
     public function __construct(
         protected BookabilityService $bookabilityService,
         protected AvailabilityService $availabilityService,
+        protected LogActivityAction $activityLogger,
     ) {
     }
 
@@ -74,6 +76,13 @@ class CreateBookingAction
         $photographer->notify(new \App\Notifications\Booking\NewBookingRequestNotification($booking));
         $client->notify(new \App\Notifications\Booking\BookingRequestSubmittedNotification($booking));
 
+        $this->activityLogger->execute(
+            causer: $client,
+            subject: $booking,
+            action: 'booking.created',
+            description: "Created booking #{$booking->id} with {$photographer->name}",
+        );
+
         return $booking;
     }
 
@@ -125,7 +134,7 @@ class CreateBookingAction
         $subtotal = (float) ($config->base_fee ?? 0) + (float) $components->sum('price_addition');
 
         // Custom package duration isn't collected by the Custom Package Calculator
-        // (Chapter 6.5) — it only produces a price. Absent an explicit duration
+        // (Chapter 6.5) ΓÇö it only produces a price. Absent an explicit duration
         // component, the photographer's shortest published package duration is
         // used as a reasonable scheduling placeholder; documented as a decision.
         $fallbackDuration = $photographer->packages()->where('status', PackageStatus::Published)->min('duration_minutes') ?? 60;

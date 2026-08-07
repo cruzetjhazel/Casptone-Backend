@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payment;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingPaymentStatus;
 use App\Enums\PaymentMatchingStatus;
 use App\Models\Payment;
@@ -10,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class RejectPaymentAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Payment $payment, User $verifier, string $notes): Payment
     {
         if (! $payment->isAwaitingManualReview()) {
@@ -31,6 +36,14 @@ class RejectPaymentAction
 
         $freshPayment = $payment->fresh();
         $freshPayment->client->notify(new \App\Notifications\Payment\PaymentRejectedNotification($freshPayment));
+
+        $this->activityLogger->execute(
+            causer: $verifier,
+            subject: $freshPayment,
+            action: 'payment.rejected',
+            description: "Rejected payment for booking #{$freshPayment->booking_id}",
+            metadata: ['notes' => $notes],
+        );
 
         return $freshPayment;
     }

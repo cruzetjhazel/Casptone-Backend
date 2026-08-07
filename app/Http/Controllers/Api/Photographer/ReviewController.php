@@ -2,49 +2,52 @@
 
 namespace App\Http\Controllers\Api\Photographer;
 
-use App\Actions\Review\ReplyToReviewAction;
-use App\Actions\Review\ReportReviewAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ReplyToReviewRequest;
+use App\Http\Requests\ReplyReviewRequest;
 use App\Http\Requests\ReportReviewRequest;
 use App\Http\Resources\ReviewResource;
 use App\Models\Review;
 use App\Traits\ApiResponses;
-use Illuminate\Http\Request;
 
 class ReviewController extends Controller
 {
     use ApiResponses;
 
-    public function index(Request $request)
+    public function index()
     {
-        return $this->success(
-            ReviewResource::collection(
-                Review::with(['client', 'photographer', 'booking'])
-                    ->where('photographer_id', $request->user()->id)
-                    ->latest()
-                    ->get()
-            )
-        );
+        $reviews = Review::where('photographer_id', auth()->id())
+            ->with(['booking', 'client', 'photographer'])
+            ->latest()
+            ->get();
+
+        return $this->success(ReviewResource::collection($reviews));
     }
 
-    public function reply(ReplyToReviewRequest $request, Review $review, ReplyToReviewAction $action)
+    public function reply(ReplyReviewRequest $request, Review $review)
     {
         $this->authorize('reply', $review);
 
-        $review = $action->execute($review, $request->validated('reply'));
+        $review->update([
+            'reply' => $request->validated('reply'),
+            'replied_at' => now(),
+        ]);
 
-        return $this->success(new ReviewResource($review->load(['client', 'photographer', 'booking'])), 'Reply published.');
+        $review->load(['booking', 'client', 'photographer']);
+
+        return $this->success(new ReviewResource($review), 'Reply published.');
     }
 
-    public function report(ReportReviewRequest $request, Review $review, ReportReviewAction $action)
+    public function report(ReportReviewRequest $request, Review $review)
     {
         $this->authorize('report', $review);
 
-        $review = $action->execute($review, $request->validated('reason'));
+        $review->update([
+            'report_reason' => $request->validated('reason'),
+            'reported_at' => now(),
+        ]);
 
-        return $this->success(new ReviewResource($review->load(['client', 'photographer', 'booking'])), 'Review reported to administrators.');
+        $review->load(['booking', 'client', 'photographer']);
+
+        return $this->success(new ReviewResource($review), 'Review reported to administrators.');
     }
-
-    // Deliberately no hide/archive/destroy method here — see ReviewPolicy.
 }

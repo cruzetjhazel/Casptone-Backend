@@ -2,6 +2,7 @@
 
 namespace App\Actions\Booking;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingStatus;
 use App\Enums\CancellationDecision;
 use App\Models\Booking;
@@ -9,6 +10,10 @@ use Illuminate\Validation\ValidationException;
 
 class DecideBookingCancellationAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Booking $booking, CancellationDecision $decision): Booking
     {
         if (! $booking->hasPendingCancellationRequest()) {
@@ -34,6 +39,17 @@ class DecideBookingCancellationAction
         } else {
             $fresh->client->notify(new \App\Notifications\Booking\CancellationRequestRejectedNotification($fresh));
         }
+
+        $this->activityLogger->execute(
+            causer: $fresh->photographer,
+            subject: $fresh,
+            action: $decision === CancellationDecision::Approved
+                ? 'booking.cancellation_approved'
+                : 'booking.cancellation_rejected',
+            description: $decision === CancellationDecision::Approved
+                ? "Approved cancellation for booking #{$fresh->id}"
+                : "Rejected cancellation request for booking #{$fresh->id}",
+        );
 
         return $fresh;
     }

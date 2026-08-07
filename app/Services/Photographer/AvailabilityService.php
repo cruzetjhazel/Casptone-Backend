@@ -2,6 +2,7 @@
 
 namespace App\Services\Photographer;
 
+use App\Enums\BookingStatus;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -12,9 +13,8 @@ class AvailabilityService
 
     /**
      * Free sub-intervals for a date, after subtracting blocked periods
-     * from the photographer's declared availability windows.
-     * Does not yet exclude existing Bookings — no Booking model exists
-     * until a later module; this is the seam for that future integration.
+     * from the photographer's declared availability windows and any
+     * blocking bookings for that date.
      */
     public function getFreeIntervals(User $user, string $date): array
     {
@@ -25,6 +25,7 @@ class AvailabilityService
         }
 
         $blocks = $user->blockedDates()->where('date', $date)->get();
+        $blockingBookings = $this->getBlockingBookings($user, $date);
 
         if ($blocks->contains(fn ($block) => $block->isFullDay())) {
             return [];
@@ -37,6 +38,10 @@ class AvailabilityService
 
             foreach ($blocks as $block) {
                 $segments = $this->subtract($segments, $block->start_time, $block->end_time);
+            }
+
+            foreach ($blockingBookings as $booking) {
+                $segments = $this->subtract($segments, $booking->start_time, $booking->end_time);
             }
 
             foreach ($segments as [$start, $end]) {
@@ -67,6 +72,19 @@ class AvailabilityService
         }
 
         return $result;
+    }
+
+    protected function getBlockingBookings(User $user, string $date)
+    {
+        return $user->bookingsAsPhotographer()
+            ->where('event_date', $date)
+            ->whereIn('status', [
+                BookingStatus::Pending->value,
+                BookingStatus::Accepted->value,
+                BookingStatus::Confirmed->value,
+            ])
+            ->orderBy('start_time')
+            ->get();
     }
 
     /**
@@ -105,8 +123,9 @@ class AvailabilityService
         }
 
         $hasBlock = $user->blockedDates()->where('date', $date)->exists();
+        $hasBlockingBooking = $this->getBlockingBookings($user, $date)->isNotEmpty();
 
-        return $hasBlock ? 'partial' : 'available';
+        return ($hasBlock || $hasBlockingBooking) ? 'partial' : 'available';
     }
 
     public function getMonthSummary(User $user, string $monthStart, string $monthEnd, int $neededMinutes): array

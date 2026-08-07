@@ -17,16 +17,24 @@ class AdminSeeder extends Seeder
             return;
         }
 
-        if (User::where('account_type', AccountType::Administrator)->exists()) {
-            $this->command->info('An administrator already exists — skipping.');
-            return;
-        }
-
+        $name = 'admin';
         $email = env('ADMIN_EMAIL', 'admin@example.test');
         $password = env('ADMIN_PASSWORD') ?: Str::password(20);
 
-        $action->execute('System Administrator', $email, $password);
+        $existing = User::where('account_type', AccountType::Administrator)->first();
 
-        $this->command->info("Seeded administrator: {$email} / password: {$password}");
+        if ($existing) {
+            $existing->forceFill([
+                'name' => $name,
+                'email' => $email,
+            ])->save();
+
+            $this->command->info("Normalized administrator: {$email}");
+            return;
+        }
+
+        $action->execute($name, $email, $password);
+
+        $this->command->info("Seeded administrator: {$email}");
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payment;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingPaymentStatus;
 use App\Enums\PaymentType;
 use App\Models\Booking;
@@ -14,6 +15,10 @@ use Illuminate\Validation\ValidationException;
  */
 class RecordOnsitePaymentAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Booking $booking, array $data): Payment
     {
         if (! $booking->isEligibleForOnsitePayment()) {
@@ -51,6 +56,14 @@ class RecordOnsitePaymentAction
         $freshBooking->client->notify(new \App\Notifications\Payment\OnsitePaymentRecordedNotification($freshPayment));
         $freshBooking->client->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
         $freshBooking->photographer->notify(new \App\Notifications\Payment\FullPaymentCompletedNotification($freshBooking));
+
+        $this->activityLogger->execute(
+            causer: $freshBooking->photographer,
+            subject: $freshPayment,
+            action: 'payment.onsite_recorded',
+            description: "Recorded onsite payment for booking #{$freshBooking->id}",
+            metadata: ['amount' => $data['amount']],
+        );
 
         return $freshPayment;
     }

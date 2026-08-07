@@ -2,40 +2,61 @@
 
 namespace App\Http\Controllers\Api\Client;
 
-use App\Actions\Review\SubmitReviewAction;
+use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CreateReviewRequest;
+use App\Http\Requests\StoreReviewRequest;
 use App\Http\Resources\ReviewResource;
 use App\Models\Booking;
 use App\Models\Review;
 use App\Traits\ApiResponses;
-use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ReviewController extends Controller
 {
     use ApiResponses;
 
-    public function index(Request $request)
+    public function index()
     {
-        return $this->success(
-            ReviewResource::collection(
-                Review::with(['client', 'photographer', 'booking'])
-                    ->where('client_id', $request->user()->id)
-                    ->latest()
-                    ->get()
-            )
-        );
+        $reviews = Review::where('client_id', auth()->id())
+            ->with(['booking', 'client', 'photographer'])
+            ->latest()
+            ->get();
+
+        return $this->success(ReviewResource::collection($reviews));
     }
 
-    public function store(CreateReviewRequest $request, SubmitReviewAction $action)
+    public function store(StoreReviewRequest $request)
     {
-        $this->authorize('create', Review::class);
-
         $booking = Booking::findOrFail($request->validated('booking_id'));
-        abort_unless($booking->client_id === $request->user()->id, 403, 'You can only review your own bookings.');
 
-        $review = $action->execute($booking, $request->validated());
+        if ($booking->client_id !== auth()->id()) {
+            abort(403, 'You can only review your own bookings.');
+        }
 
-        return $this->success(new ReviewResource($review->load(['client', 'photographer', 'booking'])), 'Review submitted.', 201);
+        // §7.24: reviewable only once the booking is Completed.
+        if ($booking->status !== BookingStatus::Completed) {
+            throw ValidationException::withMessages([
+                'booking_id' => ['This booking is not eligible for a review yet.'],
+            ]);
+        }
+
+        // §7.24: only one review per booking (also enforced by the DB unique constraint).
+        if ($booking->review) {
+            throw ValidationException::withMessages([
+                'booking_id' => ['You have already reviewed this booking.'],
+            ]);
+        }
+
+        $review = Review::create([
+            'booking_id' => $booking->id,
+            'client_id' => $booking->client_id,
+            'photographer_id' => $booking->photographer_id,
+            'rating' => $request->validated('rating'),
+            'comment' => $request->validated('comment'),
+        ]);
+
+        $review->load(['booking', 'client', 'photographer']);
+
+        return $this->success(new ReviewResource($review), 'Review submitted.', 201);
     }
 }

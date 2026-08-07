@@ -2,12 +2,17 @@
 
 namespace App\Actions\Booking;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use Illuminate\Validation\ValidationException;
 
 class RequestBookingCancellationAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Booking $booking, string $reason): Booking
     {
         if (! in_array($booking->status, [BookingStatus::Pending, BookingStatus::Accepted], true)) {
@@ -31,6 +36,14 @@ class RequestBookingCancellationAction
 
         $fresh = $booking->fresh();
         $fresh->photographer->notify(new \App\Notifications\Booking\CancellationRequestedNotification($fresh));
+
+        $this->activityLogger->execute(
+            causer: $fresh->client,
+            subject: $fresh,
+            action: 'booking.cancellation_requested',
+            description: "Requested cancellation for booking #{$fresh->id}",
+            metadata: ['reason' => $reason],
+        );
 
         return $fresh;
     }

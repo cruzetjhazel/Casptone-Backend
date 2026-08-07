@@ -18,17 +18,21 @@ use App\Http\Controllers\Api\Photographer\BlockedDateController;
 use App\Http\Controllers\Api\PublicPhotographerAvailabilityController;
 use App\Http\Controllers\Api\Client\BookingController as ClientBookingController;
 use App\Http\Controllers\Api\Photographer\BookingController as PhotographerBookingController;
-use App\Http\Controllers\Api\Photographer\ServiceTrackerController;
 use App\Http\Controllers\Api\Photographer\PaymentConfigController;
 use App\Http\Controllers\Api\Client\PaymentController as ClientPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentReferenceController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
-use App\Http\Controllers\Api\Photographer\ReviewController as PhotographerReviewController;
+use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Client\ProfileController as ClientProfileController;
 use App\Http\Controllers\Api\Client\FavoritePhotographerController;
+use App\Http\Controllers\Api\Photographer\ClientController;
+use App\Http\Controllers\Api\Photographer\ServiceTrackerController;
+use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
+use App\Http\Controllers\Api\Photographer\ReviewController as PhotographerReviewController;
+use App\Http\Controllers\Api\ReportController;
+
 
 Route::prefix('auth')->group(function () {
     Route::post('register-client', [AuthController::class, 'register']);
@@ -60,7 +64,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{photographerApplication}/request-revision', [AdminPhotographerApplicationController::class, 'requestRevision']);
     });
 });
+
+Route::post('auth/forgot-password', [PasswordResetController::class, 'forgotPassword']);
+Route::post('auth/reset-password', [PasswordResetController::class, 'resetPassword']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('client')->group(function () {
+        Route::get('profile', [ClientProfileController::class, 'show']);
+        Route::patch('profile', [ClientProfileController::class, 'update']);
+        Route::post('change-password', [ClientProfileController::class, 'changePassword']);
+        Route::post('deactivate', [ClientProfileController::class, 'deactivate']);
+
+        Route::get('favorites', [FavoritePhotographerController::class, 'index']);
+        Route::post('favorites/{user}', [FavoritePhotographerController::class, 'store']);
+        Route::delete('favorites/{user}', [FavoritePhotographerController::class, 'destroy']);
+    });
+});
+
 Route::get('photographers', [PublicPhotographerController::class, 'index']);
+Route::get('photographers/featured', [PublicPhotographerController::class, 'featured']);
 Route::get('photographers/{user}', [PublicPhotographerController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -159,13 +181,6 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('notifications', [NotificationController::class, 'index']);
-    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
-    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-});
-
-Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('client')->group(function () {
         Route::get('reviews', [ClientReviewController::class, 'index']);
         Route::post('reviews', [ClientReviewController::class, 'store']);
@@ -180,13 +195,21 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('client')->group(function () {
-        Route::get('profile', [ClientProfileController::class, 'show']);
-        Route::patch('profile', [ClientProfileController::class, 'update']);
-        Route::post('change-password', [ClientProfileController::class, 'changePassword']);
-        Route::post('deactivate', [ClientProfileController::class, 'deactivate']);
-
-        Route::get('favorites', [FavoritePhotographerController::class, 'index']);
-        Route::post('favorites/{user}', [FavoritePhotographerController::class, 'store']);
-        Route::delete('favorites/{user}', [FavoritePhotographerController::class, 'destroy']);
+        Route::get('reports', [ReportController::class, 'index']);
+        Route::post('reports', [ReportController::class, 'store']);
+        Route::get('reports/{report}', [ReportController::class, 'show']);
     });
+
+    Route::prefix('photographer')->group(function () {
+        Route::get('reports', [ReportController::class, 'index']);
+        Route::post('reports', [ReportController::class, 'store']);
+        Route::get('reports/{report}', [ReportController::class, 'show']);
+    });
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 });

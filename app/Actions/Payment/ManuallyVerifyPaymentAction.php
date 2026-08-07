@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payment;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingPaymentStatus;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMatchingStatus;
@@ -16,6 +17,10 @@ use Illuminate\Validation\ValidationException;
  */
 class ManuallyVerifyPaymentAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Payment $payment, User $verifier, ?string $notes): Payment
     {
         if (! $payment->isAwaitingManualReview()) {
@@ -55,6 +60,14 @@ class ManuallyVerifyPaymentAction
         } else {
             $freshBooking->client->notify(new \App\Notifications\Payment\RemainingBalanceNotification($freshBooking));
         }
+
+        $this->activityLogger->execute(
+            causer: $verifier,
+            subject: $freshPayment,
+            action: 'payment.manually_verified',
+            description: "Manually verified payment for booking #{$freshBooking->id}",
+            metadata: array_filter(['notes' => $notes]),
+        );
 
         return $payment->fresh();
     }

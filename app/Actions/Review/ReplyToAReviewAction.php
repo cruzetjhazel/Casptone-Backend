@@ -2,11 +2,16 @@
 
 namespace App\Actions\Review;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Models\Review;
 use Illuminate\Validation\ValidationException;
 
 class ReplyToReviewAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Review $review, string $reply): Review
     {
         if ($review->hasReply()) {
@@ -19,6 +24,15 @@ class ReplyToReviewAction
         $review->replied_at = now();
         $review->save();
 
-        return $review->fresh();
+        $fresh = $review->fresh();
+
+        $this->activityLogger->execute(
+            causer: $fresh->photographer,
+            subject: $fresh,
+            action: 'review.replied',
+            description: "Replied to review on booking #{$fresh->booking_id}",
+        );
+
+        return $fresh;
     }
 }

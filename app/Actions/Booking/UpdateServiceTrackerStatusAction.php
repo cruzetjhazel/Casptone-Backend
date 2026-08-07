@@ -2,6 +2,7 @@
 
 namespace App\Actions\Booking;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingStatus;
 use App\Enums\ServiceTrackerStatus;
 use App\Models\Booking;
@@ -10,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateServiceTrackerStatusAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Booking $booking, ServiceTrackerStatus $status): Booking
     {
         if (! $booking->canManageServiceTracker()) {
@@ -34,9 +39,18 @@ class UpdateServiceTrackerStatusAction
 
         $booking->save();
 
-        // §8.14-style client notification whenever the tracker moves.
-        $booking->client->notify(new ServiceTrackerUpdatedNotification($booking));
+        $fresh = $booking->fresh();
 
-        return $booking->fresh();
+        // §8.14-style client notification whenever the tracker moves.
+        $fresh->client->notify(new ServiceTrackerUpdatedNotification($fresh));
+
+        $this->activityLogger->execute(
+            causer: $fresh->photographer,
+            subject: $fresh,
+            action: 'booking.service_tracker_updated',
+            description: "Updated service tracker for booking #{$fresh->id} to {$status->value}",
+        );
+
+        return $fresh;
     }
 }

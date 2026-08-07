@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BookingStatus;
+use App\Models\Booking;
 use App\Models\AvailabilityWindow;
 use App\Models\BlockedDate;
 use App\Models\Package;
@@ -22,49 +24,164 @@ class PublicAvailabilityTest extends TestCase
         return $user;
     }
 
+    protected function publishedPackageFor(User $user, array $attributes = []): Package
+    {
+        return Package::factory()->for($user)->published()->create($attributes);
+    }
+
+    protected function createAvailabilityWindow(User $user, string $date, string $startTime = '09:00', string $endTime = '17:00'): void
+    {
+        AvailabilityWindow::factory()->for($user)->create([
+            'date' => $date,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+        ]);
+    }
+
+    protected function createBooking(User $photographer, string $date, string $startTime, string $endTime, BookingStatus $status): Booking
+    {
+        return Booking::factory()->create([
+            'photographer_id' => $photographer->id,
+            'event_date' => $date,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'status' => $status,
+            'hold_expires_at' => $status === BookingStatus::Pending ? now()->addHours(24) : null,
+        ]);
+    }
+
+    protected function assertSlotListFor(User $user, Package $package, string $date): array
+    {
+        $response = $this->getJson("/api/photographers/{$user->id}/availability/slots?date={$date}&package_id={$package->id}");
+
+        $response->assertOk();
+
+        return $response->json('data.start_times');
+    }
+
     public function test_public_slot_generation_respects_duration_and_buffer(): void
     {
         $user = $this->approvedPhotographer();
-        $package = Package::factory()->for($user)->published()->create([
+        $package = $this->publishedPackageFor($user, [
             'duration_minutes' => 120,
             'buffer_minutes' => 30,
         ]);
         $date = now()->addDays(7)->format('Y-m-d');
-        AvailabilityWindow::factory()->for($user)->create([
-            'date' => $date, 'start_time' => '09:00', 'end_time' => '13:00',
-        ]);
+        $this->createAvailabilityWindow($user, $date, '09:00', '13:00');
 
-        $response = $this->getJson("/api/photographers/{$user->id}/availability/slots?date={$date}&package_id={$package->id}");
+        $slots = $this->assertSlotListFor($user, $package, $date);
 
-        $response->assertOk();
         // 09:00-13:00 window, 150 min needed (120+30) -> last valid start is 10:30 (10:30+150=13:00)
-        $this->assertContains('09:00', $response->json('data.start_times'));
-        $this->assertContains('10:30', $response->json('data.start_times'));
-        $this->assertNotContains('11:00', $response->json('data.start_times'));
+        $this->assertContains('09:00', $slots);
+        $this->assertContains('10:30', $slots);
+        $this->assertNotContains('11:00', $slots);
     }
 
     public function test_blocked_period_removes_overlapping_slots(): void
     {
         $user = $this->approvedPhotographer();
-        $package = Package::factory()->for($user)->published()->create([
+        $package = $this->publishedPackageFor($user, [
             'duration_minutes' => 60, 'buffer_minutes' => 0,
         ]);
         $date = now()->addDays(7)->format('Y-m-d');
-        AvailabilityWindow::factory()->for($user)->create(['date' => $date, 'start_time' => '09:00', 'end_time' => '12:00']);
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
         BlockedDate::factory()->for($user)->create(['date' => $date, 'start_time' => '10:00', 'end_time' => '11:00']);
 
-        $response = $this->getJson("/api/photographers/{$user->id}/availability/slots?date={$date}&package_id={$package->id}");
+        $slots = $this->assertSlotListFor($user, $package, $date);
 
-        $response->assertOk();
-        $this->assertNotContains('10:00', $response->json('data.start_times'));
-        $this->assertContains('09:00', $response->json('data.start_times'));
-        $this->assertContains('11:00', $response->json('data.start_times'));
+        $this->assertNotContains('10:00', $slots);
+        $this->assertContains('09:00', $slots);
+        $this->assertContains('11:00', $slots);
+    }
+
+    public function test_overlapping_pending_booking_blocks_availability(): void
+    {
+        $user = $this->approvedPhotographer();
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $date = now()->addDays(7)->format('Y-m-d');
+
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
+        $this->createBooking($user, $date, '10:00', '11:00', BookingStatus::Pending);
+
+        $slots = $this->assertSlotListFor($user, $package, $date);
+
+        $this->assertNotContains('10:00', $slots);
+    }
+
+    public function test_overlapping_accepted_booking_blocks_availability(): void
+    {
+        $user = $this->approvedPhotographer();
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $date = now()->addDays(7)->format('Y-m-d');
+
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
+        $this->createBooking($user, $date, '10:00', '11:00', BookingStatus::Accepted);
+
+        $slots = $this->assertSlotListFor($user, $package, $date);
+
+        $this->assertNotContains('10:00', $slots);
+    }
+
+    public function test_overlapping_confirmed_booking_blocks_availability(): void
+    {
+        $user = $this->approvedPhotographer();
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $date = now()->addDays(7)->format('Y-m-d');
+
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
+        $this->createBooking($user, $date, '10:00', '11:00', BookingStatus::Confirmed);
+
+        $slots = $this->assertSlotListFor($user, $package, $date);
+
+        $this->assertNotContains('10:00', $slots);
+    }
+
+    public function test_overlapping_rejected_booking_does_not_block_availability(): void
+    {
+        $user = $this->approvedPhotographer();
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $date = now()->addDays(7)->format('Y-m-d');
+
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
+        $this->createBooking($user, $date, '10:00', '11:00', BookingStatus::Rejected);
+
+        $slots = $this->assertSlotListFor($user, $package, $date);
+
+        $this->assertContains('10:00', $slots);
+    }
+
+    public function test_overlapping_cancelled_booking_does_not_block_availability(): void
+    {
+        $user = $this->approvedPhotographer();
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $date = now()->addDays(7)->format('Y-m-d');
+
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
+        $this->createBooking($user, $date, '10:00', '11:00', BookingStatus::Cancelled);
+
+        $slots = $this->assertSlotListFor($user, $package, $date);
+
+        $this->assertContains('10:00', $slots);
+    }
+
+    public function test_overlapping_completed_booking_does_not_block_availability(): void
+    {
+        $user = $this->approvedPhotographer();
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $date = now()->addDays(7)->format('Y-m-d');
+
+        $this->createAvailabilityWindow($user, $date, '09:00', '12:00');
+        $this->createBooking($user, $date, '10:00', '11:00', BookingStatus::Completed);
+
+        $slots = $this->assertSlotListFor($user, $package, $date);
+
+        $this->assertContains('10:00', $slots);
     }
 
     public function test_month_calendar_distinguishes_available_partial_and_unavailable(): void
     {
         $user = $this->approvedPhotographer();
-        $package = Package::factory()->for($user)->published()->create(['duration_minutes' => 60, 'buffer_minutes' => 0]);
+        $package = $this->publishedPackageFor($user, ['duration_minutes' => 60, 'buffer_minutes' => 0]);
 
         // Anchor all three dates to the start of next month so they can
         // never straddle a month boundary, regardless of today's date.
@@ -72,9 +189,10 @@ class PublicAvailabilityTest extends TestCase
         $partialDate = $availableDate->copy()->addDay();
         $unavailableDate = $availableDate->copy()->addDays(2);
 
-        AvailabilityWindow::factory()->for($user)->create(['date' => $availableDate->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '17:00']);
-        AvailabilityWindow::factory()->for($user)->create(['date' => $partialDate->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '17:00']);
+        $this->createAvailabilityWindow($user, $availableDate->format('Y-m-d'));
+        $this->createAvailabilityWindow($user, $partialDate->format('Y-m-d'));
         BlockedDate::factory()->for($user)->create(['date' => $partialDate->format('Y-m-d'), 'start_time' => '09:00', 'end_time' => '10:00']);
+        $this->createBooking($user, $partialDate->format('Y-m-d'), '10:00', '11:00', BookingStatus::Confirmed);
         // unavailableDate has no window at all
 
         $response = $this->getJson("/api/photographers/{$user->id}/availability/calendar?month={$availableDate->format('Y-m')}&package_id={$package->id}");

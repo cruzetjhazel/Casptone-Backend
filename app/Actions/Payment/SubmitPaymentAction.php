@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payment;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\BookingPaymentStatus;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMatchingStatus;
@@ -22,6 +23,10 @@ use Illuminate\Validation\ValidationException;
  */
 class SubmitPaymentAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Booking $booking, array $data): Payment
     {
         if ($booking->status !== BookingStatus::Accepted) {
@@ -94,6 +99,14 @@ class SubmitPaymentAction
             } else {
                 $freshBooking->client->notify(new \App\Notifications\Payment\RemainingBalanceNotification($freshBooking));
             }
+
+            $this->activityLogger->execute(
+                causer: $freshBooking->client,
+                subject: $freshPayment,
+                action: 'payment.submitted_matched',
+                description: "Submitted and auto-matched {$plan->value} payment for booking #{$freshBooking->id}",
+                metadata: ['amount' => $data['amount'], 'plan' => $plan->value],
+            );
         } else {
             $booking->update([
                 'payment_plan' => $plan,
@@ -104,6 +117,14 @@ class SubmitPaymentAction
 
             $booking->client->notify(new \App\Notifications\Payment\PaymentPendingVerificationNotification($freshPayment));
             $booking->photographer->notify(new \App\Notifications\Payment\PaymentNeedsReviewNotification($freshPayment));
+
+            $this->activityLogger->execute(
+                causer: $booking->client,
+                subject: $freshPayment,
+                action: 'payment.submitted_unmatched',
+                description: "Submitted {$plan->value} payment for booking #{$booking->id}, pending manual verification",
+                metadata: ['amount' => $data['amount'], 'plan' => $plan->value],
+            );
         }
 
         return $payment->fresh();
