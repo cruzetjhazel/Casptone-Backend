@@ -13,6 +13,7 @@ class CreateCustomPackageComponentAction
         return CustomPackageComponent::create([
             'user_id' => $user->id,
             'type' => $data['type'],
+            'tier_name' => $data['tier_name'] ?? null,
             'label' => $data['label'],
             'price_addition' => $data['price_addition'],
             'status' => AddOnStatus::Active,

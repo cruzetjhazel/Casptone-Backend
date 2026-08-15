@@ -11,7 +11,7 @@ class PhotographerPortfolioImage extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'path', 'status'];
+    protected $fillable = ['user_id', 'path', 'status', 'sort_order'];
 
     protected function casts(): array
     {

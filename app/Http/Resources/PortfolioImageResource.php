@@ -14,6 +14,7 @@ class PortfolioImageResource extends JsonResource
             'id' => $this->id,
             'url' => Storage::disk('public')->url($this->path),
             'status' => $this->status->value,
+            'sort_order' => $this->sort_order,
             'created_at' => $this->created_at,
         ];
     }

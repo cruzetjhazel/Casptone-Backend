@@ -22,12 +22,23 @@ class PhotographerPublicProfileResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'favorites_count' => (int) ($this->favorites_count ?? 0),
+            'bookings_count' => (int) ($this->bookings_count ?? 0),
+            'joined_at' => $application?->reviewed_at ?? $this->created_at,
             'is_bookable' => app(\App\Services\Photographer\BookabilityService::class)->isBookable($this->resource),
             'photographer_type' => $application?->photographer_type?->value,
             'business_name' => $application?->business_name,
             'location' => $application?->location,
             'coverage_area' => $application?->coverage_area,
-            'services' => $application?->services,
+            'services' => collect($application?->services ?? [])
+                ->merge(
+                    $application?->other_services
+                        ? array_filter(array_map('trim', explode(',', $application->other_services)))
+                        : []
+                )
+                ->unique()
+                ->values()
+                ->all(),
             'starting_price' => $application?->price_min,
             'max_price' => $application?->price_max,
             'style' => $profile?->style,
@@ -40,7 +51,10 @@ class PhotographerPublicProfileResource extends JsonResource
                 'website' => $profile?->website,
             ],
             'portfolio' => PortfolioImageResource::collection(
-                $this->portfolioImages->where('status', \App\Enums\PortfolioImageStatus::Active)
+                $this->portfolioImages
+                    ->where('status', \App\Enums\PortfolioImageStatus::Active)
+                    ->sortBy('sort_order')
+                    ->values()
             ),
             'packages' => PublicPackageResource::collection(
                 $this->packages->where('status', \App\Enums\PackageStatus::Published)

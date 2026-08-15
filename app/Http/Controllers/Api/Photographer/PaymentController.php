@@ -22,7 +22,9 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         return $this->success(
-            PaymentResource::collection($request->user()->paymentsAsPhotographer()->latest()->get())
+            PaymentResource::collection(
+                $request->user()->paymentsAsPhotographer()->with('booking.client')->latest()->get()
+            )
         );
     }
 

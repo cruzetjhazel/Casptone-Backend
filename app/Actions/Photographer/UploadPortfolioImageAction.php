@@ -22,10 +22,15 @@ class UploadPortfolioImageAction
 
         $path = $file->store("portfolio/{$user->id}", 'public');
 
+        // Append to the end of the photographer's existing order.
+        $nextPosition = $user->portfolioImages()->max('sort_order');
+        $nextPosition = $nextPosition === null ? 0 : $nextPosition + 1;
+
         return PhotographerPortfolioImage::create([
             'user_id' => $user->id,
             'path' => $path,
             'status' => PortfolioImageStatus::Active,
+            'sort_order' => $nextPosition,
         ]);
     }
 }

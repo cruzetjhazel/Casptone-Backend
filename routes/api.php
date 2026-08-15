@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Photographer\PaymentConfigController;
 use App\Http\Controllers\Api\Client\PaymentController as ClientPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Photographer\PaymentReferenceController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
@@ -32,7 +33,10 @@ use App\Http\Controllers\Api\Photographer\ServiceTrackerController;
 use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
 use App\Http\Controllers\Api\Photographer\ReviewController as PhotographerReviewController;
 use App\Http\Controllers\Api\ReportController;
-
+use App\Http\Controllers\Api\PublicPhotographerCustomPackageController;
+use App\Http\Controllers\Api\Photographer\AnalyticsController;
+use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\ServiceSearchLogController;
 
 Route::prefix('auth')->group(function () {
     Route::post('register-client', [AuthController::class, 'register']);
@@ -78,6 +82,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('favorites', [FavoritePhotographerController::class, 'index']);
         Route::post('favorites/{user}', [FavoritePhotographerController::class, 'store']);
         Route::delete('favorites/{user}', [FavoritePhotographerController::class, 'destroy']);
+
+        Route::get('activity-logs', [ActivityLogController::class, 'mine']);
     });
 });
 
@@ -85,15 +91,20 @@ Route::get('photographers', [PublicPhotographerController::class, 'index']);
 Route::get('photographers/featured', [PublicPhotographerController::class, 'featured']);
 Route::get('photographers/{user}', [PublicPhotographerController::class, 'show']);
 
+Route::post('search-logs', [ServiceSearchLogController::class, 'store']);
+Route::get('search-logs/popular', [ServiceSearchLogController::class, 'popular']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('photographer')->group(function () {
         Route::post('profile', [ProfileController::class, 'store']);
         Route::get('profile', [ProfileController::class, 'show']);
         Route::patch('profile', [ProfileController::class, 'update']);
         Route::get('profile/completeness', [ProfileController::class, 'completeness']);
+        Route::post('change-password', [ProfileController::class, 'changePassword']);
 
         Route::get('portfolio', [PortfolioController::class, 'index']);
         Route::post('portfolio', [PortfolioController::class, 'store']);
+        Route::patch('portfolio/reorder', [PortfolioController::class, 'reorder']);
         Route::post('portfolio/{portfolioImage}/archive', [PortfolioController::class, 'archive']);
         Route::post('portfolio/{portfolioImage}/restore', [PortfolioController::class, 'restore']);
         Route::delete('portfolio/{portfolioImage}', [PortfolioController::class, 'destroy']);
@@ -103,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 Route::get('photographers/{user}/packages', [PublicPhotographerPackageController::class, 'index']);
 Route::get('photographers/{user}/add-ons', [PublicPhotographerAddOnController::class, 'index']);
+Route::get('photographers/{user}/custom-package', [PublicPhotographerCustomPackageController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('photographer')->group(function () {
@@ -116,6 +128,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('add-ons', AddOnController::class)->parameters(['add-ons' => 'addOn']);
         Route::post('add-ons/{addOn}/archive', [AddOnController::class, 'archive']);
         Route::post('add-ons/{addOn}/restore', [AddOnController::class, 'restore']);
+
+        Route::get('clients', [ClientController::class, 'index']);
+        Route::post('clients', [ClientController::class, 'store']);
+        Route::patch('clients/{walkInClient}', [ClientController::class, 'update']);
+        Route::post('clients/{walkInClient}/archive', [ClientController::class, 'archive']);
 
         Route::get('custom-package/config', [CustomPackageController::class, 'showConfig']);
         Route::patch('custom-package/config', [CustomPackageController::class, 'updateConfig']);
@@ -175,9 +192,18 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('payments/{payment}/verify', [PhotographerPaymentController::class, 'verify']);
         Route::post('payments/{payment}/reject', [PhotographerPaymentController::class, 'reject']);
+
+        Route::get('activity-logs', [ActivityLogController::class, 'mine']);
     });
 
     Route::get('admin/payments', [AdminPaymentController::class, 'index']);
+
+    Route::prefix('admin/users')->group(function () {
+        Route::get('/', [AdminUserController::class, 'index']);
+        Route::get('{user}', [AdminUserController::class, 'show']);
+        Route::post('{user}/suspend', [AdminUserController::class, 'suspend']);
+        Route::post('{user}/reactivate', [AdminUserController::class, 'reactivate']);
+    });
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -190,6 +216,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('reviews', [PhotographerReviewController::class, 'index']);
         Route::post('reviews/{review}/reply', [PhotographerReviewController::class, 'reply']);
         Route::post('reviews/{review}/report', [PhotographerReviewController::class, 'report']);
+        Route::get('analytics', [AnalyticsController::class, 'index']);
     });
 });
 

@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api\Photographer;
 
+
+use App\Actions\Photographer\ChangePasswordAction;
 use App\Actions\Photographer\CreatePhotographerProfileAction;
 use App\Actions\Photographer\UpdatePhotographerProfileAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\PhotographerProfileRequest;
 use App\Http\Resources\PhotographerProfileResource;
 use App\Models\PhotographerProfile;
@@ -54,6 +57,13 @@ class ProfileController extends Controller
         }
 
         return $this->success($service->evaluate($request->user()));
+    }
+
+    public function changePassword(ChangePasswordRequest $request, ChangePasswordAction $action)
+    {
+        $action->execute($request->user(), $request->validated('current_password'), $request->validated('password'));
+
+        return $this->success(null, 'Password changed successfully.');
     }
 
     protected function profileFor(Request $request): PhotographerProfile

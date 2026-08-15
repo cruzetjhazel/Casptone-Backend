@@ -2,12 +2,17 @@
 
 namespace App\Actions\Photographer\Package;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\PackageStatus;
 use App\Models\Package;
 use Illuminate\Validation\ValidationException;
 
 class RestorePackageAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(Package $package): Package
     {
         if ($package->status !== PackageStatus::Archived) {
@@ -16,10 +21,16 @@ class RestorePackageAction
             ]);
         }
 
-        // Restored packages return to Draft — re-publishing is a deliberate,
-        // separate action so a package never silently reappears to Clients.
         $package->update(['status' => PackageStatus::Draft]);
+        $fresh = $package->fresh();
 
-        return $package->fresh();
+        $this->activityLogger->execute(
+            causer: $fresh->user,
+            subject: $fresh,
+            action: 'package.restored',
+            description: "Restored package \"{$fresh->name}\" to draft",
+        );
+
+        return $fresh;
     }
 }

@@ -178,5 +178,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\WalkInClient::class, 'photographer_id');
     }
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class)->latest();
+    }
     
 }

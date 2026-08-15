@@ -2,15 +2,20 @@
 
 namespace App\Actions\Photographer\Package;
 
+use App\Actions\ActivityLog\LogActivityAction;
 use App\Enums\PackageStatus;
 use App\Models\Package;
 use App\Models\User;
 
 class CreatePackageAction
 {
+    public function __construct(protected LogActivityAction $activityLogger)
+    {
+    }
+
     public function execute(User $user, array $data): Package
     {
-        return Package::create([
+        $package = Package::create([
             'user_id' => $user->id,
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
@@ -20,5 +25,14 @@ class CreatePackageAction
             'buffer_minutes' => $data['buffer_minutes'] ?? 0,
             'status' => PackageStatus::Draft,
         ]);
+
+        $this->activityLogger->execute(
+            causer: $user,
+            subject: $package,
+            action: 'package.created',
+            description: "Created package \"{$package->name}\"",
+        );
+
+        return $package;
     }
 }

@@ -61,6 +61,9 @@ class ClientController extends Controller
                     'status' => $hasActiveBooking ? 'active' : 'inactive',
                     'source' => 'Platform',
                     'joined_year' => (int) $client->created_at->format('Y'),
+                    // Registered clients are derived from bookings, not a
+                    // stored record — they're never archivable.
+                    'archived_at' => null,
                 ];
             })
             ->values();
@@ -102,8 +105,45 @@ class ClientController extends Controller
     {
         abort_unless($walkInClient->photographer_id === $request->user()->id, 403);
 
-        $walkInClient->update(['status' => 'archived']);
+        $walkInClient->update([
+            'status' => 'archived',
+            'archived_at' => now(),
+        ]);
 
         return new WalkInClientResource($walkInClient);
     }
+
+    public function restore(Request $request, WalkInClient $walkInClient): WalkInClientResource
+    {
+        abort_unless($walkInClient->photographer_id === $request->user()->id, 403);
+
+        // Mirrors the default status new walk-ins are created with in store().
+        $walkInClient->update([
+            'status' => 'inactive',
+            'archived_at' => null,
+        ]);
+
+        return new WalkInClientResource($walkInClient);
+    }
+
+    public function destroy(Request $request, WalkInClient $walkInClient): JsonResponse
+    {
+        abort_unless($walkInClient->photographer_id === $request->user()->id, 403);
+        abort_unless($walkInClient->status === 'archived', 422, 'Only archived clients can be permanently deleted.');
+
+        $walkInClient->delete();
+
+        return response()->json(['message' => 'Walk-in client permanently deleted.']);
+    }
 }
+
+// --- Route additions needed in api.php, in the same `photographer` group as
+//     the existing `clients/{walkInClient}/archive` route ---
+//
+// Route::post('clients/{walkInClient}/restore', [ClientController::class, 'restore']);
+// Route::delete('clients/{walkInClient}', [ClientController::class, 'destroy']);
+
+// --- WalkInClientResource.php ALSO needs `archived_at` added to its toArray():
+//     'archived_at' => $this->archived_at,
+//     I don't have this file's current content — add that one line manually,
+//     or send me the file and I'll return it patched.

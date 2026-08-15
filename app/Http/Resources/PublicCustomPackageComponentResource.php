@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CustomPackageComponentResource extends JsonResource
+class PublicCustomPackageComponentResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
@@ -15,7 +15,6 @@ class CustomPackageComponentResource extends JsonResource
             'tier_name' => $this->tier_name,
             'label' => $this->label,
             'price_addition' => $this->price_addition,
-            'status' => $this->status->value,
         ];
     }
 }

@@ -24,6 +24,7 @@ class FavoritePhotographerResource extends JsonResource
             'business_name' => $application?->business_name,
             'style' => $profile?->style,
             'profile_photo_url' => $profile?->profile_photo_path ? Storage::disk('public')->url($profile->profile_photo_path) : null,
+            'cover_photo_url' => $profile?->cover_photo_path ? Storage::disk('public')->url($profile->cover_photo_path) : null,
             'is_available' => $isAvailable,
             'favorited_at' => $this->created_at,
         ];

@@ -12,7 +12,7 @@ class CustomPackageComponent extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'type', 'label', 'price_addition', 'status'];
+    protected $fillable = ['user_id', 'type', 'tier_name', 'label', 'price_addition', 'status'];
 
     protected function casts(): array
     {

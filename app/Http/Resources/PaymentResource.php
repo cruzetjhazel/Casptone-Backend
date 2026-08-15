@@ -17,6 +17,11 @@ class PaymentResource extends JsonResource
                 'status' => $this->booking->status->value,
                 'payment_status' => $this->booking->payment_status->value,
             ],
+            'client' => [
+                'id' => $this->booking->client->id,
+                'name' => $this->booking->client->name,
+            ],
+            'event_type' => $this->booking->event_type,
             'type' => $this->type->value,
             'method' => $this->method,
             'plan' => $this->plan->value,

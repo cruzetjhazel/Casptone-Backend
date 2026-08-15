@@ -13,10 +13,10 @@ class ActivityLogResource extends JsonResource
             'id' => $this->id,
             'action' => $this->action,
             'description' => $this->description,
-            'causer' => $this->whenLoaded('causer', fn () => [
+            'causer' => $this->whenLoaded('causer', fn () => $this->causer ? [
                 'id' => $this->causer->id,
                 'name' => $this->causer->name,
-            ]),
+            ] : null),
             'subject_type' => $this->subject_type ? class_basename($this->subject_type) : null,
             'subject_id' => $this->subject_id,
             'metadata' => $this->metadata,

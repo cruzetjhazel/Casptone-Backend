@@ -30,6 +30,7 @@ class CustomPackageController extends Controller
         return $this->success(new CustomPackageConfigResource($config));
     }
 
+
     public function updateConfig(CustomPackageConfigRequest $request, UpdateCustomPackageConfigAction $action)
     {
         $this->authorize('manage', \App\Models\CustomPackageConfig::class);

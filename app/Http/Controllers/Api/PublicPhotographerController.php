@@ -13,13 +13,22 @@ class PublicPhotographerController extends Controller
 {
     use ApiResponses;
 
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
 {
+    $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+
     $photographers = User::query()
         ->where('account_type', \App\Enums\AccountType::Photographer)
         ->whereHas('photographerApplication', fn ($q) =>
             $q->where('status', \App\Enums\PhotographerApplicationStatus::Approved)
         )
+        ->when($request->filled('date'), function ($query) use ($request) {
+            $date = $request->query('date');
+            $query->whereDoesntHave('blockedDates', fn ($q) =>
+                $q->where('date', $date)->whereNull('start_time')
+            );
+        })
+        ->withCount(['favoritePhotographers as favorites_count', 'bookingsAsPhotographer as bookings_count'])
         ->with(['photographerProfile', 'photographerApplication', 'portfolioImages', 'packages', 'addOns'])
         ->get();
 

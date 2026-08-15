@@ -34,7 +34,7 @@ class RejectBookingAction
             causer: $fresh->photographer,
             subject: $fresh,
             action: 'booking.rejected',
-            description: "Rejected booking #{$fresh->id}",
+            description: "Rejected booking #{$fresh->id} for {$fresh->client->name}",
             metadata: ['reason' => $reason],
         );
 

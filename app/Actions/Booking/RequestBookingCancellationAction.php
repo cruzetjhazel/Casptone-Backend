@@ -41,7 +41,7 @@ class RequestBookingCancellationAction
             causer: $fresh->client,
             subject: $fresh,
             action: 'booking.cancellation_requested',
-            description: "Requested cancellation for booking #{$fresh->id}",
+            description: "{$fresh->client->name} requested cancellation for booking #{$fresh->id}",
             metadata: ['reason' => $reason],
         );
 
