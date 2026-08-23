@@ -25,6 +25,10 @@ class UserController extends Controller
 
         $users = User::query()
             ->with(['photographerApplication'])
+            ->where(function ($q) {
+                $q->where('account_type', '!=', \App\Enums\AccountType::Photographer)
+                  ->orWhereHas('photographerApplication', fn ($q) => $q->where('status', '!=', \App\Enums\PhotographerApplicationStatus::Draft));
+            })
             ->when($request->query('account_type'), fn ($q, $type) => $q->where('account_type', $type))
             ->when($request->query('account_status'), fn ($q, $status) => $q->where('account_status', $status))
             ->when($request->query('search'), fn ($q, $search) => $q->where(function ($q) use ($search) {

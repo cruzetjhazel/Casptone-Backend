@@ -3,14 +3,11 @@
 namespace App\Notifications\Booking;
 
 use App\Models\Booking;
-use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
 class ServiceTrackerUpdatedNotification extends Notification
 {
-    use Queueable;
-
-    public function __construct(private readonly Booking $booking)
+    public function __construct(protected Booking $booking)
     {
     }
 
@@ -21,11 +18,17 @@ class ServiceTrackerUpdatedNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
+        $stage = $this->booking->service_status;
+        $stageValue = is_object($stage) && method_exists($stage, 'value') ? $stage->value : (string) $stage;
+        $label = ucwords(str_replace('_', ' ', $stageValue));
+        $eventLabel = $this->booking->custom_event_type ?: $this->booking->event_type;
+
         return [
-            'booking_id' => $this->booking->id,
-            'service_status' => $this->booking->service_status->value,
-            'message' => 'Your booking service status is now: '
-                . str_replace('_', ' ', $this->booking->service_status->value) . '.',
+            'type' => 'booking',
+            'title' => 'Booking Status Updated',
+            'description' => "Your {$eventLabel} booking is now: {$label}.",
+            'booking_id' => (string) $this->booking->id,
+            'action' => null,
         ];
     }
 }

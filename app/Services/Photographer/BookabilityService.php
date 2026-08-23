@@ -23,10 +23,6 @@ class BookabilityService
 
         $checklist = $this->completenessService->evaluate($photographer);
 
-        if (! $checklist['module_3_requirements_met']) {
-            return false;
-        }
-
-        return $photographer->hasActivePackage();
+        return $checklist['fully_bookable'];
     }
 }

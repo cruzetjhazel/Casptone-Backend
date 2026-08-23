@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\ProfileView;
 use App\Models\Review;
 use App\Traits\ApiResponses;
 use Illuminate\Support\Carbon;
@@ -61,12 +62,22 @@ class AnalyticsController extends Controller
 
         $avgRating = Review::where('photographer_id', $photographerId)->avg('rating');
 
+        $thisMonthViews = ProfileView::where('photographer_id', $photographerId)
+            ->whereBetween('viewed_on', [$thisMonthStart, Carbon::now()])
+            ->count();
+
+        $lastMonthViews = ProfileView::where('photographer_id', $photographerId)
+            ->whereBetween('viewed_on', [$lastMonthStart, $lastMonthEnd])
+            ->count();
+
         return [
             'total_revenue' => $thisMonthRevenue,
             'revenue_change_pct' => $this->pctChange($lastMonthRevenue, $thisMonthRevenue),
             'bookings_this_month' => $thisMonthBookings,
             'bookings_change' => $thisMonthBookings - $lastMonthBookings,
             'avg_rating' => $avgRating ? round($avgRating, 1) : null,
+            'profile_views_this_month' => $thisMonthViews,
+            'profile_views_change_pct' => $this->pctChange($lastMonthViews, $thisMonthViews),
         ];
     }
 
@@ -87,10 +98,15 @@ class AnalyticsController extends Controller
                     ->whereBetween('event_date', [$month, $end])
                     ->count();
 
+                $views = ProfileView::where('photographer_id', $photographerId)
+                    ->whereBetween('viewed_on', [$month, $end])
+                    ->count();
+
                 return [
                     'month' => $month->format('M'),
                     'revenue' => $revenue,
                     'bookings' => $bookings,
+                    'views' => $views,
                 ];
             })
             ->values()

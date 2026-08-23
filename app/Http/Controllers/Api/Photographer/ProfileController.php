@@ -24,7 +24,10 @@ class ProfileController extends Controller
     {
         $this->authorize('create', PhotographerProfile::class);
 
-        $profile = $action->execute($request->user(), $request->validated());
+            $profile = $action->execute($request->user(), $request->validated(), [
+            'profile_photo' => $request->file('profile_photo'),
+            'cover_photo' => $request->file('cover_photo'),
+        ]);
 
         return $this->success(new PhotographerProfileResource($profile), 'Profile created.', 201);
     }

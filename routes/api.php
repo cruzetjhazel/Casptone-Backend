@@ -18,11 +18,13 @@ use App\Http\Controllers\Api\Photographer\BlockedDateController;
 use App\Http\Controllers\Api\PublicPhotographerAvailabilityController;
 use App\Http\Controllers\Api\Client\BookingController as ClientBookingController;
 use App\Http\Controllers\Api\Photographer\BookingController as PhotographerBookingController;
+use App\Http\Controllers\Api\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Api\Photographer\PaymentConfigController;
 use App\Http\Controllers\Api\Client\PaymentController as ClientPaymentController;
 use App\Http\Controllers\Api\Photographer\PaymentController as PhotographerPaymentController;
 use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Photographer\PaymentReferenceController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\Api\Photographer\ServiceTrackerController;
 use App\Http\Controllers\Api\Client\ReviewController as ClientReviewController;
 use App\Http\Controllers\Api\Photographer\ReviewController as PhotographerReviewController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Api\PublicPhotographerCustomPackageController;
 use App\Http\Controllers\Api\Photographer\AnalyticsController;
 use App\Http\Controllers\Api\ActivityLogController;
@@ -197,12 +200,24 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('admin/payments', [AdminPaymentController::class, 'index']);
+    Route::get('admin/bookings', [AdminBookingController::class, 'index']);
+    Route::get('admin/bookings/{booking}', [AdminBookingController::class, 'show']);
+    Route::post('admin/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel']);
+    Route::get('admin/dashboard-stats', [AdminDashboardController::class, 'stats']);
+    Route::get('admin/activity-logs', [ActivityLogController::class, 'index']);
 
     Route::prefix('admin/users')->group(function () {
         Route::get('/', [AdminUserController::class, 'index']);
         Route::get('{user}', [AdminUserController::class, 'show']);
         Route::post('{user}/suspend', [AdminUserController::class, 'suspend']);
         Route::post('{user}/reactivate', [AdminUserController::class, 'reactivate']);
+    });
+
+    Route::prefix('admin/reports')->group(function () {
+        Route::get('/', [AdminReportController::class, 'index']);
+        Route::get('{report}', [AdminReportController::class, 'show']);
+        Route::patch('{report}/status', [AdminReportController::class, 'updateStatus']);
+        Route::post('{report}/notes', [AdminReportController::class, 'addNote']);
     });
 });
 

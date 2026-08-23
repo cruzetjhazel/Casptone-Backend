@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Booking\ExpireStaleBookingHoldsAction;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -9,3 +10,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('archive:purge --days=90')->daily();
+
+Schedule::call(fn () => app(ExpireStaleBookingHoldsAction::class)->execute())
+    ->everyFifteenMinutes()
+    ->name('expire-stale-booking-holds')
+    ->withoutOverlapping();

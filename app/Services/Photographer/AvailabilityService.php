@@ -37,7 +37,7 @@ class AvailabilityService
     /**
      * Per-day availability for a month.
      *
-     * @return array<string, "past"|"available"|"unavailable"> keyed by "Y-m-d"
+     * @return array<string, "past"|"available"|"partial"|"unavailable"> keyed by "Y-m-d"
      */
     public function getMonthSummary(User $photographer, string $start, string $end, int $durationMinutes): array
     {
@@ -75,9 +75,7 @@ class AvailabilityService
             $dayBlocks = $blocksByDate->get($dateStr, collect());
             $dayBookings = $bookingsByDate->get($dateStr, collect());
 
-            $summary[$dateStr] = $this->hasAvailableStartTime($dateStr, $window, $dayBlocks, $dayBookings, $durationMinutes)
-                ? 'available'
-                : 'unavailable';
+            $summary[$dateStr] = $this->dayStatus($dateStr, $window, $dayBlocks, $dayBookings, $durationMinutes);
         }
 
         return $summary;
@@ -109,9 +107,30 @@ class AvailabilityService
         return $this->availableStartTimes($date, $window, $blocks, $bookings, $durationMinutes);
     }
 
-    private function hasAvailableStartTime(string $dateStr, ?AvailabilityWindow $window, Collection $blocks, Collection $bookings, int $durationMinutes): bool
+    private function dayStatus(string $dateStr, ?AvailabilityWindow $window, Collection $blocks, Collection $bookings, int $durationMinutes): string
     {
-        return count($this->availableStartTimes($dateStr, $window, $blocks, $bookings, $durationMinutes)) > 0;
+        // Full-day block still voids the whole day outright.
+        if ($blocks->contains(fn (BlockedDate $b) => $b->isFullDay())) {
+            return 'unavailable';
+        }
+
+        $totalSlots = $this->totalPossibleSlots($dateStr, $window, $durationMinutes);
+        $openSlots = count($this->availableStartTimes($dateStr, $window, $blocks, $bookings, $durationMinutes));
+
+        if ($openSlots === 0) {
+            return 'unavailable';
+        }
+
+        return $openSlots < $totalSlots ? 'partial' : 'available';
+    }
+
+    /**
+     * Slot count for the day/window with no blocks or bookings applied —
+     * the baseline used to detect whether any slots got carved out.
+     */
+    private function totalPossibleSlots(string $dateStr, ?AvailabilityWindow $window, int $durationMinutes): int
+    {
+        return count($this->availableStartTimes($dateStr, $window, collect(), collect(), $durationMinutes));
     }
 
     /**
