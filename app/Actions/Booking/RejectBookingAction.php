@@ -22,7 +22,7 @@ class RejectBookingAction
         }
 
         $booking->update([
-            'status' => BookingStatus::Rejected,
+            'status' => BookingStatus::Cancelled,
             'rejection_reason' => $reason,
             'hold_expires_at' => null,
         ]);

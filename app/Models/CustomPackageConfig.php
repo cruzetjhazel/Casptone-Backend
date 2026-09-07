@@ -10,13 +10,18 @@ class CustomPackageConfig extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'enabled', 'base_fee'];
+    protected $fillable = ['user_id', 'enabled', 'base_fee', 'buffer_minutes'];
 
     protected function casts(): array
     {
         return [
             'enabled' => 'boolean',
             'base_fee' => 'decimal:2',
+            // Applied to every custom-package booking this photographer
+            // receives — mirrors Package.buffer_minutes, which exists
+            // per fixed package instead. See CreateBookingAction::
+            // resolveCustomPackage().
+            'buffer_minutes' => 'integer',
         ];
     }
 

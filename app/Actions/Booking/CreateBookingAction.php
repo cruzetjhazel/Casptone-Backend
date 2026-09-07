@@ -133,15 +133,41 @@ class CreateBookingAction
 
         $subtotal = (float) ($config->base_fee ?? 0) + (float) $components->sum('price_addition');
 
-        // Custom package duration isn't collected by the Custom Package Calculator
-        // (Chapter 6.5) ΓÇö it only produces a price. Absent an explicit duration
-        // component, the photographer's shortest published package duration is
-        // used as a reasonable scheduling placeholder; documented as a decision.
-        $fallbackDuration = $photographer->packages()->where('status', PackageStatus::Published)->min('duration_minutes') ?? 60;
-        $fallbackBuffer = $photographer->packages()->where('status', PackageStatus::Published)->min('buffer_minutes') ?? 0;
+        // The client must have selected EXACTLY ONE component carrying a real
+        // coverage duration (see the 2026_09_06_211623_add_duration_to_custom_
+        // package_table migration). We never guess a duration from the
+        // photographer's fixed packages — a wrong guess would reserve less
+        // time than the client actually booked and let a second client
+        // double-book the remainder (this replaced an earlier fallback that
+        // did exactly that; do not reintroduce it).
+        //
+        // Both zero and more-than-one duration components are rejected here:
+        // zero means the calendar can't safely reserve any time at all, and
+        // more than one is ambiguous (a photographer accidentally marking two
+        // components as durations, or a tampered/duplicated request) — silently
+        // taking the first one would let the wrong duration reserve the slot.
+        $durationComponents = $components->filter(fn ($c) => $c->duration_minutes !== null);
+
+        if ($durationComponents->count() === 0) {
+            throw ValidationException::withMessages([
+                'custom_component_ids' => ['Please select a photography coverage duration for your custom package.'],
+            ]);
+        }
+
+        if ($durationComponents->count() > 1) {
+            throw ValidationException::withMessages([
+                'custom_component_ids' => ['Please select only one photography coverage duration option.'],
+            ]);
+        }
+
+        $durationComponent = $durationComponents->first();
+
+        $bufferMinutes = (int) ($config->buffer_minutes ?? 0);
 
         $snapshot = [
             'base_fee' => (string) ($config->base_fee ?? 0),
+            'duration_minutes' => $durationComponent->duration_minutes,
+            'buffer_minutes' => $bufferMinutes,
             'components' => $components->map(fn ($c) => [
                 'label' => $c->label,
                 'type' => $c->type->value,
@@ -149,7 +175,7 @@ class CreateBookingAction
             ])->values()->toArray(),
         ];
 
-        return [$fallbackDuration + $fallbackBuffer, $subtotal, null, null, $snapshot];
+        return [$durationComponent->duration_minutes + $bufferMinutes, $subtotal, null, null, $snapshot];
     }
 
     protected function resolveAddOns(User $photographer, array $addOnIds): array
@@ -186,7 +212,7 @@ class CreateBookingAction
     {
         $conflict = $photographer->bookingsAsPhotographer()
             ->where('event_date', $date)
-            ->whereIn('status', [\App\Enums\BookingStatus::Pending, \App\Enums\BookingStatus::Accepted, \App\Enums\BookingStatus::Confirmed])
+            ->whereIn('status', [\App\Enums\BookingStatus::Pending, \App\Enums\BookingStatus::Confirmed])
             ->where('start_time', '<', $end)
             ->where('end_time', '>', $start)
             ->exists();

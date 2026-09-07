@@ -28,7 +28,6 @@ class AvailabilityService
     // Bookings in these statuses actually hold the calendar slot.
     private const BLOCKING_BOOKING_STATUSES = [
         BookingStatus::Pending,
-        BookingStatus::Accepted,
         BookingStatus::Confirmed,
     ];
 
@@ -114,23 +113,57 @@ class AvailabilityService
             return 'unavailable';
         }
 
-        $totalSlots = $this->totalPossibleSlots($dateStr, $window, $durationMinutes);
+        // Single simulation of the day — openSlots is derived from it, and
+        // totalSlots is now a closed-form count of the same window with no
+        // blocks/bookings applied, instead of re-running the simulation a
+        // second time just to get a baseline.
         $openSlots = count($this->availableStartTimes($dateStr, $window, $blocks, $bookings, $durationMinutes));
 
         if ($openSlots === 0) {
             return 'unavailable';
         }
 
+        $totalSlots = $this->totalPossibleSlots($dateStr, $window, $durationMinutes);
+
         return $openSlots < $totalSlots ? 'partial' : 'available';
     }
 
     /**
      * Slot count for the day/window with no blocks or bookings applied —
-     * the baseline used to detect whether any slots got carved out.
+     * the baseline used to detect whether any slots got carved out. Computed
+     * arithmetically (window length vs. duration/step) instead of walking
+     * the day minute-by-minute, since with no busy ranges every step in
+     * that walk would trivially be open anyway.
      */
     private function totalPossibleSlots(string $dateStr, ?AvailabilityWindow $window, int $durationMinutes): int
     {
-        return count($this->availableStartTimes($dateStr, $window, collect(), collect(), $durationMinutes));
+        [$windowStart, $windowEnd] = $this->resolveWindow($dateStr, $window);
+        // Cast explicitly: Carbon's diffInMinutes() isn't guaranteed to
+        // return a plain int across versions (some configurations return
+        // float), and intdiv() requires strict int arguments.
+        $totalMinutes = (int) $windowStart->diffInMinutes($windowEnd);
+
+        if ($totalMinutes < $durationMinutes) {
+            return 0;
+        }
+
+        return intdiv($totalMinutes - $durationMinutes, self::SLOT_STEP_MINUTES) + 1;
+    }
+
+    /**
+     * Resolves the bookable [start, end] for a date: the AvailabilityWindow
+     * if the photographer set one, otherwise the full day (00:00-24:00).
+     */
+    private function resolveWindow(string $dateStr, ?AvailabilityWindow $window): array
+    {
+        $windowStart = $window
+            ? Carbon::parse("{$dateStr} {$window->start_time}")
+            : Carbon::parse("{$dateStr} 00:00");
+        $windowEnd = $window
+            ? Carbon::parse("{$dateStr} {$window->end_time}")
+            : Carbon::parse("{$dateStr} 00:00")->addDay();
+
+        return [$windowStart, $windowEnd];
     }
 
     /**
@@ -148,12 +181,7 @@ class AvailabilityService
         // No explicit AvailabilityWindow = the photographer hasn't narrowed
         // this date's hours, so the whole day is open by default. Blocks and
         // bookings below are still what actually carve out unavailable time.
-        $windowStart = $window
-            ? Carbon::parse("{$dateStr} {$window->start_time}")
-            : Carbon::parse("{$dateStr} 00:00");
-        $windowEnd = $window
-            ? Carbon::parse("{$dateStr} {$window->end_time}")
-            : Carbon::parse("{$dateStr} 00:00")->addDay();
+        [$windowStart, $windowEnd] = $this->resolveWindow($dateStr, $window);
 
         $busyRanges = [];
 
@@ -178,12 +206,20 @@ class AvailabilityService
         $slots = [];
         $cursor = $windowStart->copy();
 
-        while ($cursor->copy()->addMinutes($durationMinutes)->lte($windowEnd)) {
+        while (true) {
             $slotEnd = $cursor->copy()->addMinutes($durationMinutes);
 
-            $overlaps = collect($busyRanges)->contains(
-                fn ($range) => $cursor->lt($range[1]) && $slotEnd->gt($range[0])
-            );
+            if ($slotEnd->gt($windowEnd)) {
+                break;
+            }
+
+            $overlaps = false;
+            foreach ($busyRanges as $range) {
+                if ($cursor->lt($range[1]) && $slotEnd->gt($range[0])) {
+                    $overlaps = true;
+                    break;
+                }
+            }
 
             if (! $overlaps) {
                 $slots[] = $cursor->format('H:i');

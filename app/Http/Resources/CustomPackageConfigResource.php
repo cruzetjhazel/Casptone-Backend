@@ -12,6 +12,7 @@ class CustomPackageConfigResource extends JsonResource
         return [
             'enabled' => $this->enabled,
             'base_fee' => $this->base_fee,
+            'buffer_minutes' => $this->buffer_minutes,
             'updated_at' => $this->updated_at,
         ];
     }

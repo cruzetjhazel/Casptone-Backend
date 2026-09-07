@@ -7,7 +7,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class PublicCustomPackageComponentResource extends JsonResource
 {
-    public function toArray(Request $request): array
+        public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
@@ -15,6 +15,7 @@ class PublicCustomPackageComponentResource extends JsonResource
             'tier_name' => $this->tier_name,
             'label' => $this->label,
             'price_addition' => $this->price_addition,
+            'duration_minutes' => $this->duration_minutes,
         ];
     }
 }

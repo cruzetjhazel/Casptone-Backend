@@ -29,7 +29,7 @@ class SubmitPaymentAction
 
     public function execute(Booking $booking, array $data): Payment
     {
-        if ($booking->status !== BookingStatus::Accepted) {
+        if ($booking->status !== BookingStatus::Confirmed) {
             throw ValidationException::withMessages([
                 'booking' => ['This booking is not currently awaiting payment.'],
             ]);

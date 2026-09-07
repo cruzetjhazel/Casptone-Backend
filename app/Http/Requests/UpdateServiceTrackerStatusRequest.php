@@ -15,9 +15,7 @@ class UpdateServiceTrackerStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'service_status' => ['required', Rule::in([
-                'upcoming', 'event_day', 'in_progress', 'photo_editing', 'ready_for_release', 'completed',
-            ])],
+            'service_status' => ['required', Rule::in(['event_day', 'editing', 'delivered'])],
         ];
     }
 }

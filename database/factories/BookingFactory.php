@@ -41,7 +41,9 @@ class BookingFactory extends Factory
 
     public function accepted(): static
     {
-        return $this->state(fn () => ['status' => BookingStatus::Accepted, 'hold_expires_at' => null]);
+        // Mirrors AcceptBookingAction: Pending -> Confirmed is the real
+        // outcome. There's no separate 'accepted' status on this enum.
+        return $this->state(fn () => ['status' => BookingStatus::Confirmed, 'hold_expires_at' => null]);
     }
 
     public function confirmed(): static
@@ -59,15 +61,20 @@ class BookingFactory extends Factory
             'status' => BookingStatus::Completed,
             'payment_plan' => PaymentPlan::Full,
             'payment_status' => BookingPaymentStatus::FullyPaid,
-            'service_status' => ServiceTrackerStatus::Completed,
+            // 'completed' was dropped from chk_booking_service_status by
+            // 2026_09_07_082733_fix_service_status_check_constraint_table;
+            // Delivered is the current terminal state.
+            'service_status' => ServiceTrackerStatus::Delivered,
             'service_status_updated_at' => now(),
         ]);
     }
 
     public function rejected(): static
     {
+        // Mirrors RejectBookingAction: Pending -> Cancelled + rejection_reason.
+        // There's no separate 'rejected' status on this enum.
         return $this->state(fn () => [
-            'status' => BookingStatus::Rejected,
+            'status' => BookingStatus::Cancelled,
             'rejection_reason' => 'Not available for this date.',
             'hold_expires_at' => null,
         ]);

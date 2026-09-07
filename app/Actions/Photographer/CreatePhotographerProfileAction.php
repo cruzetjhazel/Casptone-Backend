@@ -37,3 +37,14 @@ class CreatePhotographerProfileAction
         }
 
         if ($fields) {
+            $profile->update($fields);
+        }
+
+        return $profile->fresh();
+    }
+
+    protected function store(PhotographerProfile $profile, UploadedFile $file, string $type): string
+    {
+        return $file->store("photographers/{$profile->user_id}/{$type}", 'public');
+    }
+}

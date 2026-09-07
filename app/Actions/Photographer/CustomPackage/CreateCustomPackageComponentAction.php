@@ -16,6 +16,9 @@ class CreateCustomPackageComponentAction
             'tier_name' => $data['tier_name'] ?? null,
             'label' => $data['label'],
             'price_addition' => $data['price_addition'],
+            // Null unless this option represents a selectable photography
+            // coverage duration — see CustomPackageComponentRequest.
+            'duration_minutes' => $data['duration_minutes'] ?? null,
             'status' => AddOnStatus::Active,
         ]);
     }

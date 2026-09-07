@@ -15,6 +15,7 @@ class CustomPackageComponentResource extends JsonResource
             'tier_name' => $this->tier_name,
             'label' => $this->label,
             'price_addition' => $this->price_addition,
+            'duration_minutes' => $this->duration_minutes,
             'status' => $this->status->value,
         ];
     }

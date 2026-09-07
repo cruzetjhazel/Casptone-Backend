@@ -18,8 +18,7 @@ class ServiceTrackerUpdatedNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
-        $stage = $this->booking->service_status;
-        $stageValue = is_object($stage) && method_exists($stage, 'value') ? $stage->value : (string) $stage;
+        $stageValue = $this->booking->service_status?->value ?? '';
         $label = ucwords(str_replace('_', ' ', $stageValue));
         $eventLabel = $this->booking->custom_event_type ?: $this->booking->event_type;
 

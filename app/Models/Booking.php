@@ -137,6 +137,6 @@ class Booking extends Model
      */
     public function canManageServiceTracker(): bool
     {
-        return in_array($this->status, [BookingStatus::Confirmed, BookingStatus::Completed], true);
+        return $this->status === BookingStatus::Confirmed;
     }
 }

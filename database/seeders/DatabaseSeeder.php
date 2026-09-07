@@ -15,11 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            User::factory()->raw(['name' => 'Test User'])
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // AdminSeeder must run first — DemoSeeder attributes admin-side
+        // actions (application approvals, payment verifications, report
+        // notes) to whichever administrator it creates/normalizes.
+        $this->call(AdminSeeder::class);
+        $this->call(DemoSeeder::class);
     }
 }
